@@ -1,0 +1,359 @@
+/**
+ * Ultimizer – Panel de administración.
+ * Estilos modernos, limpios y compatibles con el admin de WordPress.
+ */
+
+/* ============================================================
+   Layout principal
+   ============================================================ */
+
+.ultimizer-wrap {
+	margin: 20px 20px 20px 0;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.ultimizer-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 2px solid #e2e8f0;
+}
+
+.ultimizer-logo {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.ultimizer-logo .dashicons {
+	font-size: 32px;
+	width: 32px;
+	height: 32px;
+	color: #6366f1;
+}
+
+.ultimizer-logo h1 {
+	margin: 0;
+	font-size: 24px;
+	font-weight: 700;
+	color: #1e293b;
+	line-height: 1;
+}
+
+.ultimizer-version {
+	font-size: 12px;
+	color: #94a3b8;
+	background: #f1f5f9;
+	padding: 4px 10px;
+	border-radius: 99px;
+}
+
+/* ============================================================
+   Navegación por pestañas
+   ============================================================ */
+
+.ultimizer-tabs {
+	margin-bottom: 24px;
+}
+
+.ultimizer-tabs ul {
+	display: flex;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border-bottom: 2px solid #e2e8f0;
+}
+
+.ultimizer-tabs li a {
+	display: block;
+	padding: 10px 18px;
+	font-size: 13px;
+	font-weight: 500;
+	color: #475569;
+	text-decoration: none;
+	border-radius: 6px 6px 0 0;
+	transition: background 0.15s, color 0.15s;
+}
+
+.ultimizer-tabs li a:hover {
+	color: #6366f1;
+	background: #f1f5f9;
+}
+
+.ultimizer-tabs li.active a {
+	color: #6366f1;
+	background: #fff;
+	border: 2px solid #e2e8f0;
+	border-bottom: 2px solid #fff;
+	margin-bottom: -2px;
+}
+
+/* ============================================================
+   Tarjetas de estadísticas
+   ============================================================ */
+
+.ultimizer-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 16px;
+	margin-bottom: 28px;
+}
+
+.ultimizer-stat-card {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 20px 16px;
+	text-align: center;
+	box-shadow: 0 1px 3px rgba(0,0,0,.06);
+	transition: box-shadow 0.2s;
+}
+
+.ultimizer-stat-card:hover {
+	box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+
+.ultimizer-stat-card .stat-icon {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+	color: #94a3b8;
+	margin-bottom: 8px;
+}
+
+.ultimizer-stat-card .stat-value {
+	font-size: 26px;
+	font-weight: 700;
+	color: #1e293b;
+	line-height: 1;
+	margin-bottom: 4px;
+}
+
+.ultimizer-stat-card .stat-label {
+	font-size: 12px;
+	color: #64748b;
+}
+
+.ultimizer-stat-card.accent-green  { border-top: 3px solid #22c55e; }
+.ultimizer-stat-card.accent-orange { border-top: 3px solid #f97316; }
+.ultimizer-stat-card.accent-blue   { border-top: 3px solid #3b82f6; }
+.ultimizer-stat-card.accent-purple { border-top: 3px solid #a855f7; }
+
+/* ============================================================
+   Barra de progreso
+   ============================================================ */
+
+.ultimizer-progress-section {
+	margin-bottom: 28px;
+}
+
+.ultimizer-progress-label {
+	display: flex;
+	justify-content: space-between;
+	font-size: 13px;
+	color: #475569;
+	margin-bottom: 8px;
+}
+
+.ultimizer-progress-bar {
+	height: 10px;
+	background: #e2e8f0;
+	border-radius: 99px;
+	overflow: hidden;
+}
+
+.ultimizer-progress-bar.large {
+	height: 20px;
+}
+
+.ultimizer-progress-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #6366f1, #a855f7);
+	border-radius: 99px;
+	transition: width 0.4s ease;
+}
+
+/* ============================================================
+   Información del servidor
+   ============================================================ */
+
+.ultimizer-server-info h3 {
+	font-size: 15px;
+	color: #1e293b;
+	margin-bottom: 12px;
+}
+
+.ultimizer-info-table td {
+	vertical-align: middle;
+}
+
+/* ============================================================
+   Badges
+   ============================================================ */
+
+.ult-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 99px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.6;
+}
+
+.ult-badge.green  { background: #dcfce7; color: #166534; }
+.ult-badge.orange { background: #ffedd5; color: #9a3412; }
+.ult-badge.red    { background: #fee2e2; color: #991b1b; }
+.ult-badge.blue   { background: #dbeafe; color: #1e40af; }
+
+.ult-count-badge {
+	display: inline-block;
+	background: #6366f1;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 2px 8px;
+	border-radius: 99px;
+	vertical-align: middle;
+	margin-left: 6px;
+}
+
+.ult-hint {
+	font-size: 11px;
+	color: #94a3b8;
+	font-weight: 400;
+}
+
+/* ============================================================
+   Secciones de configuración
+   ============================================================ */
+
+.ultimizer-section {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	padding: 20px 24px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.ultimizer-section h2 {
+	font-size: 15px;
+	font-weight: 600;
+	color: #1e293b;
+	margin-top: 0;
+	margin-bottom: 16px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+/* ============================================================
+   Optimizador masivo
+   ============================================================ */
+
+.ultimizer-bulk-panel {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 28px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.ultimizer-bulk-stats {
+	display: flex;
+	gap: 20px;
+	margin-bottom: 24px;
+}
+
+.bulk-stat {
+	flex: 1;
+	text-align: center;
+	padding: 16px;
+	background: #f8fafc;
+	border-radius: 10px;
+	border: 1px solid #e2e8f0;
+}
+
+.bulk-stat.accent-green  { border-color: #86efac; background: #f0fdf4; }
+.bulk-stat.accent-orange { border-color: #fdba74; background: #fff7ed; }
+
+.bulk-stat-number {
+	display: block;
+	font-size: 32px;
+	font-weight: 700;
+	color: #1e293b;
+	line-height: 1;
+	margin-bottom: 4px;
+}
+
+.bulk-stat-label {
+	font-size: 13px;
+	color: #64748b;
+}
+
+.ultimizer-bulk-controls {
+	display: flex;
+	gap: 12px;
+	margin-bottom: 24px;
+}
+
+.button-hero {
+	padding: 10px 24px !important;
+	font-size: 15px !important;
+	height: auto !important;
+}
+
+#ult-bulk-progress-wrap {
+	margin-top: 24px;
+}
+
+.ultimizer-bulk-log {
+	margin-top: 16px;
+	max-height: 260px;
+	overflow-y: auto;
+	font-size: 12px;
+	color: #475569;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 12px;
+}
+
+.ultimizer-bulk-log .log-line {
+	padding: 3px 0;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.ultimizer-bulk-log .log-line:last-child {
+	border-bottom: none;
+}
+
+.ultimizer-bulk-log .log-line.success { color: #166534; }
+.ultimizer-bulk-log .log-line.error   { color: #991b1b; }
+.ultimizer-bulk-log .log-line.skip    { color: #92400e; }
+
+/* ============================================================
+   Tablas de log y respaldos
+   ============================================================ */
+
+.ultimizer-log-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.ultimizer-log-controls h2 {
+	margin: 0;
+}
+
+.ultimizer-log-table {
+	font-size: 13px;
+}
+
+.ultimizer-log-table th {
+	font-weight: 600;
+	color: #374151;
+}
