@@ -5,40 +5,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Ultimizer_Updater {
 
-	/** @var string */
 	private $file;
-
-	/** @var string */
 	private $basename;
-
-	/** @var bool */
-	private $active;
-
-	/** @var string */
 	private $github_user = 'kerackdiaz';
-
-	/** @var string */
 	private $github_repo = 'ultimizer';
-
-	/** @var object|null */
 	private $release_info = null;
+
+	const CACHE_KEY = 'ultimizer_github_release';
+	const CACHE_TTL = 12 * HOUR_IN_SECONDS;
 
 	// -------------------------------------------------------------------------
 	// Constructor
 	// -------------------------------------------------------------------------
 
 	public function __construct( $plugin_file ) {
-		$this->file = $plugin_file;
+		$this->file     = $plugin_file;
+		$this->basename = plugin_basename( $plugin_file ); // set here — no timing issues.
 
-		add_action( 'admin_init', [ $this, 'setup' ] );
 		add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_for_update' ] );
 		add_filter( 'plugins_api',                           [ $this, 'plugin_info' ], 10, 3 );
 		add_filter( 'upgrader_post_install',                 [ $this, 'after_install' ], 10, 3 );
-	}
-
-	public function setup() {
-		$this->basename = plugin_basename( $this->file );
-		$this->active   = is_plugin_active( $this->basename );
+		add_action( 'upgrader_process_complete',             [ $this, 'purge_cache' ], 10, 2 );
 	}
 
 	// -------------------------------------------------------------------------
@@ -54,8 +41,7 @@ class Ultimizer_Updater {
 			return null;
 		}
 
-		$cache_key = 'ultimizer_github_info';
-		$cached    = get_transient( $cache_key );
+		$cached = get_transient( self::CACHE_KEY );
 
 		if ( false !== $cached ) {
 			$this->release_info = $cached;
@@ -85,8 +71,7 @@ class Ultimizer_Updater {
 			return null;
 		}
 
-		// Cache 12 hours.
-		set_transient( $cache_key, $info, 12 * HOUR_IN_SECONDS );
+		set_transient( self::CACHE_KEY, $info, self::CACHE_TTL );
 		$this->release_info = $info;
 
 		return $info;
@@ -97,7 +82,7 @@ class Ultimizer_Updater {
 	// -------------------------------------------------------------------------
 
 	public function check_for_update( $transient ) {
-		if ( empty( $transient->checked ) || empty( $this->basename ) ) {
+		if ( empty( $transient->checked ) ) {
 			return $transient;
 		}
 
@@ -170,15 +155,25 @@ class Ultimizer_Updater {
 			return $result;
 		}
 
+		// Check active state at install time, not at setup time.
+		$was_active = is_plugin_active( $this->basename );
+
 		$install_dir = plugin_dir_path( $this->file );
 		$wp_filesystem->move( $result['destination'], $install_dir );
 		$result['destination'] = $install_dir;
 
-		if ( $this->active ) {
+		if ( $was_active ) {
 			activate_plugin( $this->basename );
 		}
 
 		return $result;
+	}
+
+	public function purge_cache( $upgrader, $options ) {
+		if ( 'update' === $options['action'] && 'plugin' === $options['type'] ) {
+			delete_transient( self::CACHE_KEY );
+			$this->release_info = null;
+		}
 	}
 
 	// -------------------------------------------------------------------------
