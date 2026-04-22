@@ -1,7 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# Exclude from GitHub release zip
-.gitattributes    export-ignore
-.gitignore        export-ignore
-README.md         export-ignore
+# Exclude from GitHub release zip / WordPress.org zip
+.gitattributes                          export-ignore
+.gitignore                              export-ignore
+README.md                               export-ignore
+includes/class-ultimizer-updater.php    export-ignore

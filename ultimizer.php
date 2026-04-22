@@ -24,7 +24,6 @@ require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-logger.php';
 require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-backup.php';
 require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-optimizer.php';
 require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-frontend.php';
-require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-updater.php';
 require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-admin.php';
 
 final class Ultimizer {
@@ -57,7 +56,6 @@ final class Ultimizer {
 
 	public function deactivate() {
 		( new Ultimizer_Optimizer() )->remove_htaccess_rules();
-		delete_transient( 'ultimizer_github_info' );
 	}
 
 	public function init() {
@@ -69,7 +67,6 @@ final class Ultimizer {
 
 		if ( is_admin() ) {
 			new Ultimizer_Admin();
-			new Ultimizer_Updater( ULTIMIZER_PLUGIN_FILE );
 		} else {
 			new Ultimizer_Frontend();
 		}
