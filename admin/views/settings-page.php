@@ -1,12 +1,4 @@
 <?php
-/**
- * Vista principal del panel de administración de Ultimizer.
- * Incluida desde Ultimizer_Admin::render_page().
- *
- * Variables disponibles:
- *   $tab  – Pestaña activa.
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -17,260 +9,189 @@ $backup    = new Ultimizer_Backup();
 $settings  = get_option( 'ultimizer_settings', Ultimizer_Optimizer::get_defaults() );
 $stats     = $logger->get_global_stats();
 ?>
-<div class="wrap ultimizer-wrap">
+<div class="wrap ult-wrap">
 
-	<div class="ultimizer-header">
-		<div class="ultimizer-logo">
-			<span class="dashicons dashicons-format-image"></span>
+	<div class="ult-header">
+		<div class="ult-brand">
+			<img src="<?php echo esc_url( ULTIMIZER_PLUGIN_URL . 'assets/ultimizer.png' ); ?>" alt="Ultimizer" class="ult-brand-logo">
 			<h1>Ultimizer</h1>
 		</div>
-		<span class="ultimizer-version">v<?php echo esc_html( ULTIMIZER_VERSION ); ?></span>
+		<span class="ult-ver">v<?php echo esc_html( ULTIMIZER_VERSION ); ?></span>
 	</div>
 
 	<?php echo Ultimizer_Admin::render_tabs( $tab ); ?>
 
 	<?php if ( ! empty( $_GET['updated'] ) ) : ?>
-		<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Configuración guardada correctamente.', 'ultimizer' ); ?></p></div>
+		<div class="notice notice-success is-dismissible"><p>Configuración guardada correctamente.</p></div>
 	<?php endif; ?>
 
-	<div class="ultimizer-content">
+	<div class="ult-content">
 
 	<?php
 	// =========================================================================
-	// PESTAÑA: PANEL
+	// PANEL
 	// =========================================================================
 	if ( 'panel' === $tab ) :
-		$total_images    = $optimizer->count_optimized() + $optimizer->count_unoptimized();
-		$optimized_count = $optimizer->count_optimized();
-		$percent_done    = $total_images > 0 ? round( ( $optimized_count / $total_images ) * 100 ) : 0;
+		$total       = $optimizer->count_all();
+		$optimized   = $optimizer->count_optimized();
+		$unoptimized = $optimizer->count_unoptimized();
+		$pct         = $total > 0 ? round( ( $optimized / $total ) * 100 ) : 0;
 	?>
-		<div class="ultimizer-stats-grid">
 
-			<div class="ultimizer-stat-card">
-				<div class="stat-icon dashicons dashicons-images-alt2"></div>
-				<div class="stat-value"><?php echo esc_html( number_format_i18n( $total_images ) ); ?></div>
-				<div class="stat-label">Imágenes totales</div>
+		<div class="ult-stats-strip">
+			<div class="ult-stat">
+				<span class="ult-stat-n" id="ult-stat-total"><?php echo esc_html( number_format_i18n( $total ) ); ?></span>
+				<span class="ult-stat-l">Imágenes totales</span>
 			</div>
-
-			<div class="ultimizer-stat-card accent-green">
-				<div class="stat-icon dashicons dashicons-yes-alt"></div>
-				<div class="stat-value"><?php echo esc_html( number_format_i18n( $optimized_count ) ); ?></div>
-				<div class="stat-label">Optimizadas</div>
+			<div class="ult-stat green">
+				<span class="ult-stat-n" id="ult-stat-optimized"><?php echo esc_html( number_format_i18n( $optimized ) ); ?></span>
+				<span class="ult-stat-l">Optimizadas</span>
 			</div>
-
-			<div class="ultimizer-stat-card accent-orange">
-				<div class="stat-icon dashicons dashicons-clock"></div>
-				<div class="stat-value"><?php echo esc_html( number_format_i18n( $optimizer->count_unoptimized() ) ); ?></div>
-				<div class="stat-label">Pendientes</div>
+			<div class="ult-stat amber" id="ult-stat-pending-wrap">
+				<span class="ult-stat-n" id="ult-pending-count"><?php echo esc_html( number_format_i18n( $unoptimized ) ); ?></span>
+				<span class="ult-stat-l">Pendientes</span>
 			</div>
-
-			<div class="ultimizer-stat-card accent-blue">
-				<div class="stat-icon dashicons dashicons-chart-line"></div>
-				<div class="stat-value"><?php echo esc_html( size_format( $stats['total_savings_bytes'] ) ); ?></div>
-				<div class="stat-label">Espacio recuperado</div>
+			<div class="ult-stat blue">
+				<span class="ult-stat-n" id="ult-stat-savings"><?php echo esc_html( size_format( $stats['total_savings_bytes'] ) ); ?></span>
+				<span class="ult-stat-l">Espacio recuperado</span>
 			</div>
-
-			<div class="ultimizer-stat-card">
-				<div class="stat-icon dashicons dashicons-performance"></div>
-				<div class="stat-value"><?php echo esc_html( $stats['avg_savings_percent'] ); ?>%</div>
-				<div class="stat-label">Reducción media</div>
-			</div>
-
-			<div class="ultimizer-stat-card">
-				<div class="stat-icon dashicons dashicons-images-alt"></div>
-				<div class="stat-value"><?php echo esc_html( number_format_i18n( $stats['avif_count'] ) ); ?></div>
-				<div class="stat-label">Archivos AVIF generados</div>
-			</div>
-
-			<div class="ultimizer-stat-card">
-				<div class="stat-icon dashicons dashicons-image-filter"></div>
-				<div class="stat-value"><?php echo esc_html( number_format_i18n( $stats['webp_count'] ) ); ?></div>
-				<div class="stat-label">Archivos WebP generados</div>
-			</div>
-
-			<div class="ultimizer-stat-card accent-purple">
-				<div class="stat-icon dashicons dashicons-backup"></div>
-				<div class="stat-value"><?php echo esc_html( number_format_i18n( $backup->count_backups() ) ); ?></div>
-				<div class="stat-label">Respaldos almacenados</div>
-			</div>
-
-		</div>
-
-		<?php if ( $total_images > 0 ) : ?>
-		<div class="ultimizer-progress-section">
-			<div class="ultimizer-progress-label">
-				<span>Progreso general de optimización</span>
-				<span><strong><?php echo esc_html( $percent_done ); ?>%</strong></span>
-			</div>
-			<div class="ultimizer-progress-bar">
-				<div class="ultimizer-progress-fill" style="width: <?php echo esc_attr( $percent_done ); ?>%"></div>
+			<div class="ult-stat">
+				<span class="ult-stat-n" id="ult-stat-avg"><?php echo esc_html( $stats['avg_savings_percent'] ); ?>%</span>
+				<span class="ult-stat-l">Reducción media</span>
 			</div>
 		</div>
-		<?php endif; ?>
 
-		<div class="ultimizer-server-info">
-			<h3>Capacidades del servidor</h3>
-			<table class="ultimizer-info-table widefat striped">
-				<tbody>
-					<tr>
-						<td>Motor de imagen disponible</td>
-						<td><?php echo extension_loaded( 'imagick' ) ? '<span class="ult-badge green">Imagick</span>' : '<span class="ult-badge orange">GD (modo básico)</span>'; ?></td>
-					</tr>
-					<tr>
-						<td>Soporte AVIF</td>
-						<td><?php echo $optimizer->supports_avif() ? '<span class="ult-badge green">Disponible</span>' : '<span class="ult-badge red">No disponible</span>'; ?></td>
-					</tr>
-					<tr>
-						<td>Soporte WebP</td>
-						<td><?php echo $optimizer->supports_webp() ? '<span class="ult-badge green">Disponible</span>' : '<span class="ult-badge red">No disponible</span>'; ?></td>
-					</tr>
-					<tr>
-						<td>Versión PHP</td>
-						<td><?php echo esc_html( phpversion() ); ?></td>
-					</tr>
-					<tr>
-						<td>Directorio de respaldos</td>
-						<td><?php
-							$dir = Ultimizer_Backup::get_backup_dir();
-							echo is_writable( $dir ) ? '<span class="ult-badge green">Escribible</span>' : '<span class="ult-badge red">Sin permisos de escritura</span>';
-							echo ' <code>' . esc_html( $dir ) . '</code>';
-						?></td>
-					</tr>
-				</tbody>
-			</table>
+		<div class="ult-scan-panel">
+			<div class="ult-scan-top">
+				<div>
+					<h2>Biblioteca de imágenes</h2>
+					<p>Escanea para ver el estado, peso y ahorro estimado de cada imagen antes de optimizar.</p>
+				</div>
+				<div class="ult-scan-actions">
+					<button id="ult-scan-btn" class="button button-primary ult-btn-lg">
+						<span class="dashicons dashicons-search"></span>&nbsp;Escanear biblioteca
+					</button>
+					<button id="ult-optimize-btn" class="button ult-btn-purple ult-btn-lg" style="display:none">
+						<span class="dashicons dashicons-performance"></span>&nbsp;Iniciar optimización
+					</button>
+					<button id="ult-pause-btn" class="button button-secondary ult-btn-lg" style="display:none">Pausar</button>
+				</div>
+			</div>
+
+			<div id="ult-scan-progress" style="display:none" class="ult-progress-wrap">
+				<div class="ult-track"><div class="ult-bar" id="ult-scan-bar" style="width:0%"></div></div>
+				<p class="ult-progress-txt" id="ult-scan-status">Preparando escaneo...</p>
+			</div>
+
+			<div id="ult-opt-progress" style="display:none" class="ult-progress-wrap">
+				<div class="ult-opt-labels">
+					<span id="ult-opt-status">Procesando en servidor&hellip;</span>
+					<div class="ult-opt-right">
+						<span class="ult-opt-timer" id="ult-opt-timer">00:00</span>
+						<strong id="ult-opt-pct">0%</strong>
+					</div>
+				</div>
+				<div class="ult-track lg"><div class="ult-bar" id="ult-opt-bar" style="width:0%"></div></div>
+			</div>
+
+			<div id="ult-scan-results" style="display:none">
+				<div class="ult-results-summary" id="ult-results-summary"></div>
+				<div class="ult-table-wrap">
+					<table class="ult-image-table widefat">
+						<thead>
+							<tr>
+								<th class="col-thumb"></th>
+								<th>Nombre del archivo</th>
+								<th>Formato</th>
+								<th>Peso actual</th>
+								<th>Ahorro estimado</th>
+								<th>Estado</th>
+							</tr>
+						</thead>
+						<tbody id="ult-image-tbody"></tbody>
+					</table>
+				</div>
+			</div>
+		</div><!-- .ult-scan-panel -->
+
+		<div class="ult-server-card">
+			<h3>Motor de procesamiento</h3>
+			<div class="ult-server-grid">
+				<div class="ult-server-item">
+					<span class="ult-label">Motor</span>
+					<?php echo extension_loaded( 'imagick' ) ? '<span class="ult-pill green">Imagick</span>' : '<span class="ult-pill amber">GD (básico)</span>'; ?>
+				</div>
+				<div class="ult-server-item">
+					<span class="ult-label">AVIF</span>
+					<?php echo $optimizer->supports_avif() ? '<span class="ult-pill green">Disponible</span>' : '<span class="ult-pill red">No disponible</span>'; ?>
+				</div>
+				<div class="ult-server-item">
+					<span class="ult-label">WebP</span>
+					<?php echo $optimizer->supports_webp() ? '<span class="ult-pill green">Disponible</span>' : '<span class="ult-pill red">No disponible</span>'; ?>
+				</div>
+				<div class="ult-server-item">
+					<span class="ult-label">PHP</span>
+					<span><?php echo esc_html( phpversion() ); ?></span>
+				</div>
+				<div class="ult-server-item">
+					<span class="ult-label">Directorio de respaldos</span>
+					<?php
+					$backup_dir = Ultimizer_Backup::get_backup_dir();
+					echo is_writable( $backup_dir )
+						? '<span class="ult-pill green">Escribible</span>'
+						: '<span class="ult-pill red">Sin permisos</span>';
+					?>
+				</div>
+			</div>
 		</div>
 
 	<?php
 	// =========================================================================
-	// PESTAÑA: CONFIGURACIÓN
+	// SETTINGS
 	// =========================================================================
 	elseif ( 'settings' === $tab ) :
 	?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ultimizer-settings-form">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ult-settings-form">
 			<input type="hidden" name="action" value="ultimizer_save_settings">
 			<?php wp_nonce_field( 'ultimizer_save_settings' ); ?>
 
-			<div class="ultimizer-section">
-				<h2>Calidad y compresión</h2>
-				<table class="form-table">
-					<tr>
-						<th><label for="jpeg_quality">Calidad JPEG <span class="ult-hint">(1–100)</span></label></th>
-						<td>
-							<input type="number" id="jpeg_quality" name="jpeg_quality" min="1" max="100"
-								value="<?php echo esc_attr( $settings['jpeg_quality'] ); ?>" class="small-text">
-							<p class="description">Recomendado: 80–85. Menor valor = mayor compresión.</p>
-						</td>
-					</tr>
-					<tr>
-						<th><label for="png_compression">Compresión PNG <span class="ult-hint">(0–9)</span></label></th>
-						<td>
-							<input type="number" id="png_compression" name="png_compression" min="0" max="9"
-								value="<?php echo esc_attr( $settings['png_compression'] ); ?>" class="small-text">
-							<p class="description">Nivel de compresión zlib. 6 es el equilibrio estándar.</p>
-						</td>
-					</tr>
-					<tr>
-						<th><label for="webp_quality">Calidad WebP <span class="ult-hint">(1–100)</span></label></th>
-						<td>
-							<input type="number" id="webp_quality" name="webp_quality" min="1" max="100"
-								value="<?php echo esc_attr( $settings['webp_quality'] ); ?>" class="small-text">
-						</td>
-					</tr>
-					<tr>
-						<th><label for="avif_quality">Calidad AVIF <span class="ult-hint">(1–100)</span></label></th>
-						<td>
-							<input type="number" id="avif_quality" name="avif_quality" min="1" max="100"
-								value="<?php echo esc_attr( $settings['avif_quality'] ); ?>" class="small-text">
-							<p class="description">AVIF logra alta calidad visual con valores menores (60–70).</p>
-						</td>
-					</tr>
-				</table>
-			</div>
-
-			<div class="ultimizer-section">
-				<h2>Formatos modernos</h2>
-				<table class="form-table">
-					<tr>
-						<th>Generar AVIF</th>
-						<td>
-							<label>
-								<input type="checkbox" name="convert_to_avif" value="1"
-									<?php checked( ! empty( $settings['convert_to_avif'] ) ); ?>>
-								Crear versión <strong>.avif</strong> junto a cada imagen
-								<?php if ( ! $optimizer->supports_avif() ) : ?>
-									<span class="ult-badge red">No disponible en este servidor</span>
-								<?php endif; ?>
-							</label>
-						</td>
-					</tr>
-					<tr>
-						<th>Generar WebP</th>
-						<td>
-							<label>
-								<input type="checkbox" name="convert_to_webp" value="1"
-									<?php checked( ! empty( $settings['convert_to_webp'] ) ); ?>>
-								Crear versión <strong>.webp</strong> junto a cada imagen
-								<?php if ( ! $optimizer->supports_webp() ) : ?>
-									<span class="ult-badge red">No disponible en este servidor</span>
-								<?php endif; ?>
-							</label>
-							<p class="description">Los navegadores modernos recibirán AVIF o WebP automáticamente vía .htaccess sin cambiar ninguna URL.</p>
-						</td>
-					</tr>
-				</table>
-			</div>
-
-			<div class="ultimizer-section">
-				<h2>Comportamiento</h2>
-				<table class="form-table">
-					<tr>
-						<th>Eliminar metadatos</th>
-						<td>
-							<label>
-								<input type="checkbox" name="strip_metadata" value="1"
-									<?php checked( ! empty( $settings['strip_metadata'] ) ); ?>>
-								Eliminar metadatos EXIF, IPTC y XMP de todas las imágenes
-							</label>
-						</td>
-					</tr>
-					<tr>
-						<th>Omitir ya optimizadas</th>
-						<td>
-							<label>
-								<input type="checkbox" name="skip_optimized" value="1"
-									<?php checked( ! empty( $settings['skip_optimized'] ) ); ?>>
-								No volver a procesar imágenes ya optimizadas por Ultimizer
-							</label>
-						</td>
-					</tr>
-					<tr>
-						<th>Optimizar al subir</th>
-						<td>
-							<label>
-								<input type="checkbox" name="optimize_on_upload" value="1"
-									<?php checked( ! empty( $settings['optimize_on_upload'] ) ); ?>>
-								Optimizar automáticamente cada imagen al subirla
-							</label>
-						</td>
-					</tr>
-				</table>
-			</div>
-
-			<div class="ultimizer-section">
-				<h2>Actualizaciones desde GitHub</h2>
-				<table class="form-table">
-					<tr>
-						<th><label for="github_user">Usuario de GitHub</label></th>
-						<td>
-							<input type="text" id="github_user" name="github_user" class="regular-text"
-								value="<?php echo esc_attr( $settings['github_user'] ); ?>"
-								placeholder="tu-usuario-github">
-							<p class="description">
-								El repositorio debe llamarse <code>ultimizer</code> y publicar releases con tags de versión (p.e. <code>v1.0.1</code>).
-							</p>
-						</td>
-					</tr>
-				</table>
+			<div class="ult-card">
+				<div class="ult-card-header">
+					<span class="dashicons dashicons-images-alt2"></span>
+					<div>
+						<h3>Calidad de compresión</h3>
+						<p>Controla el equilibrio entre calidad visual y reducción de peso para cada formato de imagen.</p>
+					</div>
+				</div>
+				<div class="ult-quality-grid">
+					<?php
+					$quality_fields = [
+						[ 'id' => 'jpeg_quality',    'label' => 'JPEG',  'min' => 1,  'max' => 100, 'hint' => 'Recomendado: 80–85',   'desc' => 'Mayor compresión ← → Mayor calidad' ],
+						[ 'id' => 'png_compression', 'label' => 'PNG',   'min' => 0,  'max' => 9,   'hint' => 'Recomendado: 6',        'desc' => 'Sin comprimir ← → Máx. compresión' ],
+						[ 'id' => 'webp_quality',    'label' => 'WebP',  'min' => 1,  'max' => 100, 'hint' => 'Recomendado: 78–82',   'desc' => 'Mayor compresión ← → Mayor calidad' ],
+						[ 'id' => 'avif_quality',    'label' => 'AVIF',  'min' => 1,  'max' => 100, 'hint' => 'AVIF logra excelente calidad con 60–70', 'desc' => 'Mayor compresión ← → Mayor calidad' ],
+					];
+					foreach ( $quality_fields as $f ) :
+						$val = isset( $settings[ $f['id'] ] ) ? (int) $settings[ $f['id'] ] : 0;
+					?>
+					<div class="ult-quality-item">
+						<div class="ult-quality-top">
+							<label for="<?php echo esc_attr( $f['id'] ); ?>"><?php echo esc_html( $f['label'] ); ?></label>
+							<span class="ult-quality-val" id="<?php echo esc_attr( $f['id'] ); ?>_val"><?php echo esc_html( $val ); ?></span>
+						</div>
+						<input type="range"
+							id="<?php echo esc_attr( $f['id'] ); ?>"
+							name="<?php echo esc_attr( $f['id'] ); ?>"
+							min="<?php echo esc_attr( $f['min'] ); ?>"
+							max="<?php echo esc_attr( $f['max'] ); ?>"
+							value="<?php echo esc_attr( $val ); ?>"
+							class="ult-range"
+						>
+						<p class="ult-range-desc"><?php echo esc_html( $f['desc'] ); ?></p>
+						<p class="ult-range-hint"><?php echo esc_html( $f['hint'] ); ?></p>
+					</div>
+					<?php endforeach; ?>
+				</div>
 			</div>
 
 			<p class="submit">
@@ -278,158 +199,205 @@ $stats     = $logger->get_global_stats();
 			</p>
 		</form>
 
-	<?php
-	// =========================================================================
-	// PESTAÑA: OPTIMIZACIÓN MASIVA
-	// =========================================================================
-	elseif ( 'bulk' === $tab ) :
-		$unoptimized = $optimizer->count_unoptimized();
-		$optimized   = $optimizer->count_optimized();
-		$total       = $unoptimized + $optimized;
-	?>
-		<div class="ultimizer-bulk-panel">
-
-			<div class="ultimizer-bulk-stats">
-				<div class="bulk-stat">
-					<span class="bulk-stat-number"><?php echo esc_html( number_format_i18n( $total ) ); ?></span>
-					<span class="bulk-stat-label">Total</span>
-				</div>
-				<div class="bulk-stat accent-green">
-					<span class="bulk-stat-number"><?php echo esc_html( number_format_i18n( $optimized ) ); ?></span>
-					<span class="bulk-stat-label">Optimizadas</span>
-				</div>
-				<div class="bulk-stat accent-orange">
-					<span class="bulk-stat-number" id="ult-unoptimized-count"><?php echo esc_html( number_format_i18n( $unoptimized ) ); ?></span>
-					<span class="bulk-stat-label">Pendientes</span>
-				</div>
-			</div>
-
-			<?php if ( $unoptimized > 0 ) : ?>
-			<div class="ultimizer-bulk-controls">
-				<button id="ult-start-bulk" class="button button-primary button-hero">
-					Iniciar optimización
-				</button>
-				<button id="ult-pause-bulk" class="button button-secondary button-hero" style="display:none;">
-					Pausar
-				</button>
-			</div>
-
-			<div id="ult-bulk-progress-wrap" style="display:none;">
-				<div class="ultimizer-progress-label">
-					<span id="ult-progress-label">Preparando...</span>
-					<span><strong id="ult-progress-pct">0%</strong></span>
-				</div>
-				<div class="ultimizer-progress-bar large">
-					<div class="ultimizer-progress-fill" id="ult-progress-fill" style="width:0%"></div>
-				</div>
-				<div class="ultimizer-bulk-log" id="ult-bulk-log"></div>
-			</div>
-			<?php else : ?>
-			<div class="notice notice-success inline"><p>✓ Todas las imágenes del sitio están optimizadas.</p></div>
-			<?php endif; ?>
-
-		</div>
+		<script>
+		document.querySelectorAll('.ult-range').forEach(function(r){
+			var v = document.getElementById(r.id + '_val');
+			if(v){ r.addEventListener('input', function(){ v.textContent = this.value; }); }
+		});
+		</script>
 
 	<?php
 	// =========================================================================
-	// PESTAÑA: REGISTRO
+	// LOG
 	// =========================================================================
 	elseif ( 'log' === $tab ) :
-		$entries     = $logger->get_entries( 100, 0 );
+		$entries     = $logger->get_entries( 200, 0 );
 		$total_count = $logger->count_entries();
 	?>
-		<div class="ultimizer-log-controls">
-			<h2>Registro de optimizaciones <span class="ult-count-badge"><?php echo esc_html( number_format_i18n( $total_count ) ); ?></span></h2>
+
+		<div class="ult-section-header">
+			<div class="ult-section-meta">
+				<h2>Registro de optimizaciones</h2>
+				<span class="ult-count-pill"><?php echo esc_html( number_format_i18n( $total_count ) ); ?> entradas</span>
+			</div>
 			<?php if ( $total_count > 0 ) : ?>
 			<button id="ult-clear-log" class="button button-secondary">Vaciar registro</button>
 			<?php endif; ?>
 		</div>
 
+		<?php if ( $stats['total_entries'] > 0 ) : ?>
+		<div class="ult-log-summary">
+			<div class="ult-log-stat">
+				<span class="ult-log-stat-n"><?php echo esc_html( size_format( $stats['total_savings_bytes'] ) ); ?></span>
+				<span class="ult-log-stat-l">Total recuperado</span>
+			</div>
+			<div class="ult-log-stat">
+				<span class="ult-log-stat-n"><?php echo esc_html( $stats['avg_savings_percent'] ); ?>%</span>
+				<span class="ult-log-stat-l">Reducción media</span>
+			</div>
+			<div class="ult-log-stat">
+				<span class="ult-log-stat-n"><?php echo esc_html( number_format_i18n( $stats['total_entries'] ) ); ?></span>
+				<span class="ult-log-stat-l">Imágenes procesadas</span>
+			</div>
+		</div>
+		<?php endif; ?>
+
 		<?php if ( empty( $entries ) ) : ?>
-		<p>No hay entradas en el registro aún.</p>
+		<div class="ult-empty">
+			<span class="dashicons dashicons-chart-line"></span>
+			<p>No hay registros aún. Los datos aparecerán aquí después de optimizar imágenes.</p>
+		</div>
 		<?php else : ?>
-		<table class="ultimizer-log-table widefat striped">
-			<thead>
-				<tr>
-					<th>Adjunto</th>
-					<th>Archivo</th>
-					<th>Original</th>
-					<th>Optimizado</th>
-					<th>Ahorro</th>
-					<th>AVIF</th>
-					<th>WebP</th>
-					<th>Fecha</th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ( $entries as $entry ) : ?>
-				<tr>
-					<td><?php echo esc_html( $entry['attachment_id'] ); ?></td>
-					<td><span title="<?php echo esc_attr( $entry['file_path'] ); ?>"><?php echo esc_html( basename( $entry['file_path'] ) ); ?></span></td>
-					<td><?php echo esc_html( size_format( (int) $entry['original_size'] ) ); ?></td>
-					<td><?php echo esc_html( size_format( (int) $entry['optimized_size'] ) ); ?></td>
-					<td><strong><?php echo esc_html( $entry['savings_percent'] ); ?>%</strong> <small>(<?php echo esc_html( size_format( (int) $entry['savings_bytes'] ) ); ?>)</small></td>
-					<td><?php echo $entry['avif_generated'] ? '<span class="ult-badge green">Sí</span>' : '—'; ?></td>
-					<td><?php echo $entry['webp_generated'] ? '<span class="ult-badge blue">Sí</span>' : '—'; ?></td>
-					<td><?php echo esc_html( $entry['optimized_at'] ); ?></td>
-				</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
+		<div class="ult-table-wrap">
+			<table class="ult-log-table widefat">
+				<thead>
+					<tr>
+						<th>Archivo</th>
+						<th>Antes</th>
+						<th>Después</th>
+						<th>Ahorro</th>
+						<th>Fecha</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $entries as $e ) :
+						$pct     = (float) $e['savings_percent'];
+						$savings = (int) $e['savings_bytes'];
+						$pct_class = $pct > 0 ? 'ult-savings-pos' : ( $pct < 0 ? 'ult-savings-neg' : 'ult-savings-zero' );
+					?>
+					<tr>
+						<td>
+							<span class="ult-filename"><?php echo esc_html( basename( $e['file_path'] ) ); ?></span>
+							<small class="ult-aid">#<?php echo esc_html( $e['attachment_id'] ); ?></small>
+						</td>
+						<td><?php echo esc_html( size_format( (int) $e['original_size'] ) ); ?></td>
+						<td><?php echo esc_html( size_format( (int) $e['optimized_size'] ) ); ?></td>
+						<td>
+							<span class="ult-savings-pct <?php echo esc_attr( $pct_class ); ?>">
+								<?php echo $pct > 0 ? '-' : ( $pct < 0 ? '+' : '' ); echo esc_html( abs( $pct ) ); ?>%
+							</span>
+							<?php if ( $savings > 0 ) : ?>
+							<small class="ult-savings-bytes"><?php echo esc_html( size_format( $savings ) ); ?></small>
+							<?php elseif ( $pct < 0 ) : ?>
+							<small class="ult-savings-note">imagen ya optimizada</small>
+							<?php endif; ?>
+						</td>
+						<td><span class="ult-date"><?php echo esc_html( $e['optimized_at'] ); ?></span></td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
 		<?php endif; ?>
 
 	<?php
 	// =========================================================================
-	// PESTAÑA: RESPALDOS
+	// BACKUPS
 	// =========================================================================
 	elseif ( 'backups' === $tab ) :
-		$backups     = $backup->get_backups( 100, 0 );
-		$total_back  = $backup->count_backups();
+		$backups       = $backup->get_backups( 200, 0 );
+		$total_back    = $backup->count_backups();
+		$total_back_sz = $backup->get_total_backup_size();
 	?>
-		<h2>Respaldos almacenados <span class="ult-count-badge"><?php echo esc_html( number_format_i18n( $total_back ) ); ?></span></h2>
-		<p class="description">Los respaldos contienen el archivo original antes de ser optimizado. Puedes restaurarlos en cualquier momento.</p>
+
+		<div class="ult-section-header">
+			<div class="ult-section-meta">
+				<h2>Respaldos almacenados</h2>
+				<span class="ult-count-pill"><?php echo esc_html( number_format_i18n( $total_back ) ); ?> archivos</span>
+				<?php if ( $total_back_sz > 0 ) : ?>
+				<span class="ult-count-pill gray" id="ult-backup-total-size"><?php echo esc_html( size_format( $total_back_sz ) ); ?> en disco</span>
+				<?php endif; ?>
+			</div>
+			<?php if ( $total_back > 0 ) : ?>
+			<button id="ult-delete-all-backups" class="button button-secondary">
+				<span class="dashicons dashicons-trash" style="vertical-align:middle;margin-top:-2px"></span>
+				Eliminar todos los respaldos
+			</button>
+			<?php endif; ?>
+		</div>
+		<p class="description" style="margin-bottom:16px">
+			Cada respaldo es el archivo original antes de optimizar. Puedes restaurar en cualquier momento o eliminar los respaldos para liberar espacio en disco. <strong>Sin respaldo no se puede restaurar la imagen.</strong>
+		</p>
 
 		<?php if ( empty( $backups ) ) : ?>
-		<p>No hay respaldos aún. Se crean automáticamente al optimizar cada imagen.</p>
+		<div class="ult-empty">
+			<span class="dashicons dashicons-backup"></span>
+			<p>No hay respaldos aún. Se crean automáticamente al optimizar cada imagen.</p>
+		</div>
 		<?php else : ?>
-		<table class="ultimizer-log-table widefat striped">
-			<thead>
-				<tr>
-					<th>Título</th>
-					<th>Archivo de respaldo</th>
-					<th>Tamaño</th>
-					<th>Optimizado el</th>
-					<th>Acciones</th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ( $backups as $b ) : ?>
-				<tr>
-					<td><?php echo esc_html( $b['title'] ?: '(sin título)' ); ?></td>
-					<td><?php echo esc_html( $b['filename'] ); ?>
-						<?php if ( ! $b['exists'] ) : ?>
-							<span class="ult-badge red">Archivo no encontrado</span>
-						<?php endif; ?>
-					</td>
-					<td><?php echo esc_html( $b['size'] ); ?></td>
-					<td><?php echo esc_html( $b['optimized_at'] ); ?></td>
-					<td>
-						<?php if ( $b['exists'] ) : ?>
-						<button class="button button-small ult-restore-btn"
-							data-id="<?php echo esc_attr( $b['attachment_id'] ); ?>">
-							Restaurar original
-						</button>
-						<?php else : ?>
-						—
-						<?php endif; ?>
-					</td>
-				</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
+		<div class="ult-table-wrap">
+			<table class="ult-log-table widefat">
+				<thead>
+					<tr>
+						<th>Imagen</th>
+						<th>Archivo original</th>
+						<th>Tamaño</th>
+						<th>Formatos modernos</th>
+						<th>Optimizado el</th>
+						<th>Acciones</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $backups as $b ) : ?>
+					<tr id="ult-backup-row-<?php echo esc_attr( $b['attachment_id'] ); ?>" class="<?php echo ! $b['exists'] ? 'ult-row-missing' : ''; ?>">
+						<td><?php echo esc_html( $b['title'] ?: '(sin título)' ); ?></td>
+						<td>
+							<span class="ult-filename"><?php echo esc_html( $b['filename'] ); ?></span>
+							<?php if ( ! $b['exists'] ) : ?>
+								<span class="ult-pill red sm">No encontrado</span>
+							<?php endif; ?>
+						</td>
+						<td><?php echo esc_html( $b['size'] ); ?></td>
+						<td>
+							<?php if ( $b['has_avif'] ) : ?>
+								<span class="ult-pill green sm">AVIF</span>
+							<?php endif; ?>
+							<?php if ( $b['has_webp'] ) : ?>
+								<span class="ult-pill blue sm">WebP</span>
+							<?php endif; ?>
+							<?php if ( ! $b['has_avif'] && ! $b['has_webp'] ) : ?>
+								<span class="ult-muted">—</span>
+							<?php endif; ?>
+						</td>
+						<td><span class="ult-date"><?php echo esc_html( $b['optimized_at'] ); ?></span></td>
+						<td class="ult-backup-actions">
+							<?php if ( $b['exists'] ) : ?>
+							<button class="button button-small ult-restore-btn"
+								data-id="<?php echo esc_attr( $b['attachment_id'] ); ?>"
+								title="Restaurar la imagen original">
+								Restaurar
+							</button>
+							<?php endif; ?>
+							<button class="button button-small ult-delete-backup-btn"
+								data-id="<?php echo esc_attr( $b['attachment_id'] ); ?>"
+								title="Eliminar este respaldo para liberar espacio"
+								<?php echo ! $b['exists'] ? 'style="margin-left:0"' : ''; ?>>
+								Eliminar respaldo
+							</button>
+						</td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
 		<?php endif; ?>
 
 	<?php endif; ?>
 
-	</div><!-- .ultimizer-content -->
-</div><!-- .ultimizer-wrap -->
+	</div><!-- .ult-content -->
+
+	<div class="ult-donate-bar">
+		<div class="ult-donate-inner">
+			<span class="ult-donate-text">
+				<span class="dashicons dashicons-heart"></span>
+				¿Te ha sido útil Ultimizer? Puedes invitarme un café.
+			</span>
+			<div class="ult-donate-buttons">
+				<a href="https://paypal.me/kerackdiaz/1" target="_blank" rel="noopener" class="button ult-donate-btn">$1</a>
+				<a href="https://paypal.me/kerackdiaz/5" target="_blank" rel="noopener" class="button ult-donate-btn">$5</a>
+				<a href="https://paypal.me/kerackdiaz/10" target="_blank" rel="noopener" class="button ult-donate-btn">$10</a>
+			</div>
+		</div>
+	</div>
+
+</div><!-- .ult-wrap -->

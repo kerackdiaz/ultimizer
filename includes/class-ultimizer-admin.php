@@ -1,15 +1,4 @@
 <?php
-/**
- * Clase de administración: menú, AJAX, guardado de ajustes.
- *
- * Pestañas del panel:
- *   panel        – Estadísticas generales y capacidades del servidor.
- *   settings     – Configuración del plugin.
- *   bulk         – Optimizador masivo con barra de progreso.
- *   log          – Registro de optimizaciones.
- *   backups      – Gestión de respaldos.
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -25,8 +14,9 @@ class Ultimizer_Admin {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_menu_icon_style' ] );
 		add_action( 'admin_post_ultimizer_save_settings', [ $this, 'save_settings' ] );
+		add_filter( 'plugin_action_links_' . plugin_basename( ULTIMIZER_PLUGIN_FILE ), [ $this, 'action_links' ] );
 
-		// Endpoints AJAX.
+		// AJAX endpoints.
 		add_action( 'wp_ajax_ultimizer_get_stats',          [ $this, 'ajax_get_stats' ] );
 		add_action( 'wp_ajax_ultimizer_scan_batch',         [ $this, 'ajax_scan_batch' ] );
 		add_action( 'wp_ajax_ultimizer_bulk_process_batch', [ $this, 'ajax_bulk_process_batch' ] );
@@ -38,7 +28,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// Menú y assets
+	// Menu and assets
 	// -------------------------------------------------------------------------
 
 	public function register_menu() {
@@ -66,14 +56,14 @@ class Ultimizer_Admin {
 
 		wp_enqueue_style(
 			'ultimizer-admin',
-			ULTIMIZER_PLUGIN_URL . 'assets/css/admin-new.css',
+			ULTIMIZER_PLUGIN_URL . 'assets/css/admin.css',
 			[],
 			ULTIMIZER_VERSION
 		);
 
 		wp_enqueue_script(
 			'ultimizer-bulk',
-			ULTIMIZER_PLUGIN_URL . 'assets/js/bulk-optimizer-new.js',
+			ULTIMIZER_PLUGIN_URL . 'assets/js/bulk-optimizer.js',
 			[ 'jquery' ],
 			ULTIMIZER_VERSION,
 			true
@@ -96,7 +86,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// Renderizado del panel
+	// Render panel
 	// -------------------------------------------------------------------------
 
 	public function render_page() {
@@ -105,11 +95,11 @@ class Ultimizer_Admin {
 		}
 
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'panel'; // phpcs:ignore WordPress.Security.NonceVerification
-		require_once ULTIMIZER_PLUGIN_DIR . 'admin/views/settings-page-new.php';
+		require_once ULTIMIZER_PLUGIN_DIR . 'admin/views/settings-page.php';
 	}
 
 	// -------------------------------------------------------------------------
-	// Guardar configuración
+	// Save settings
 	// -------------------------------------------------------------------------
 
 	public function save_settings() {
@@ -139,7 +129,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: estadísticas
+	// AJAX: stats
 	// -------------------------------------------------------------------------
 
 	public function ajax_get_stats() {
@@ -166,7 +156,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: escaneo de biblioteca
+	// AJAX: library scan
 	// -------------------------------------------------------------------------
 
 	public function ajax_scan_batch() {
@@ -200,7 +190,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: lote de optimización masiva
+	// AJAX: bulk optimization batch
 	// -------------------------------------------------------------------------
 
 	public function ajax_bulk_process_batch() {
@@ -214,7 +204,7 @@ class Ultimizer_Admin {
 		$offset     = max( 0, (int) ( $_POST['offset'] ?? 0 ) );
 
 		$optimizer = new Ultimizer_Optimizer();
-		$ids       = $optimizer->get_unoptimized_ids( $batch_size, 0 ); // offset 0: siempre obtiene los primeros no optimizados.
+		$ids = $optimizer->get_unoptimized_ids( $batch_size, 0 );
 
 		$results        = [];
 		$total_saved    = 0;
@@ -258,7 +248,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: restaurar respaldo
+	// AJAX: restore backup
 	// -------------------------------------------------------------------------
 
 	public function ajax_restore_backup() {
@@ -284,7 +274,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: eliminar respaldo individual
+	// AJAX: delete single backup
 	// -------------------------------------------------------------------------
 
 	public function ajax_delete_backup() {
@@ -305,7 +295,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: eliminar todos los respaldos
+	// AJAX: delete all backups
 	// -------------------------------------------------------------------------
 
 	public function ajax_delete_all_backups() {
@@ -319,7 +309,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: limpiar log
+	// AJAX: clear log
 	// -------------------------------------------------------------------------
 
 	public function ajax_clear_log() {
@@ -335,7 +325,7 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// AJAX: activar/desactivar exclusión de una imagen
+	// AJAX: toggle image exclusion
 	// -------------------------------------------------------------------------
 
 	public function ajax_toggle_exclude() {
@@ -367,15 +357,15 @@ class Ultimizer_Admin {
 	}
 
 	// -------------------------------------------------------------------------
-	// Helpers de vista
+	// View helpers
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Devuelve el HTML de las pestañas de navegación.
-	 *
-	 * @param  string $current  Pestaña activa.
-	 * @return string
-	 */
+	public function action_links( $links ) {
+		$settings = '<a href="' . esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG . '&tab=settings' ) ) . '">Configuración</a>';
+		array_unshift( $links, $settings );
+		return $links;
+	}
+
 	public static function render_tabs( $current ) {
 		$tabs = [
 			'panel'    => 'Panel',

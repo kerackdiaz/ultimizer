@@ -1,251 +1,514 @@
-/**
- * Ultimizer – Optimizador masivo (bulk).
- * Gestiona el procesamiento en lotes mediante AJAX, barra de progreso y log en tiempo real.
- */
-
-/* global ultimizerData */
 (function ($) {
 	'use strict';
 
-	if (typeof ultimizerData === 'undefined') {
-		return;
+	if ( typeof ultimizerData === 'undefined' ) { return; }
+
+	var cfg = ultimizerData;
+
+	// localStorage key (scoped to the site).
+	var LS_KEY = 'ultimizer_scan_v1_' + ( cfg.ajaxUrl || '' ).replace( /\W/g, '' ).slice( -12 );
+
+	// Scan state
+	var scanItems   = [];
+	var totalImages = 0;
+	var optTotal    = 0;
+
+	// Real-time stat accumulators (optimization in progress).
+	var sessionSavedBytes = 0;
+	var sessionSavedPcts  = [];
+
+	// Optimization state
+	var optimizing    = false;
+	var paused        = false;
+	var optDone       = 0;
+	var startTime     = null;
+	var timerInterval = null;
+
+	// DOM refs
+	var $scanBtn     = $( '#ult-scan-btn' );
+	var $optimizeBtn = $( '#ult-optimize-btn' );
+	var $pauseBtn    = $( '#ult-pause-btn' );
+	var $scanProg    = $( '#ult-scan-progress' );
+	var $scanBar     = $( '#ult-scan-bar' );
+	var $scanStatus  = $( '#ult-scan-status' );
+	var $optProg     = $( '#ult-opt-progress' );
+	var $optBar      = $( '#ult-opt-bar' );
+	var $optStatus   = $( '#ult-opt-status' );
+	var $optPct      = $( '#ult-opt-pct' );
+	var $results     = $( '#ult-scan-results' );
+	var $tbody       = $( '#ult-image-tbody' );
+	var $summary     = $( '#ult-results-summary' );
+	var $pending     = $( '#ult-pending-count' );
+	var $statOpt     = $( '#ult-stat-optimized' );
+	var $statSavings = $( '#ult-stat-savings' );
+	var $statAvg     = $( '#ult-stat-avg' );
+
+	// =========================================================================
+	// RESTORE PREVIOUS SCAN ON LOAD
+	// =========================================================================
+
+	( function restoreScanFromStorage() {
+		try {
+			var raw = localStorage.getItem( LS_KEY );
+			if ( ! raw ) { return; }
+			var saved = JSON.parse( raw );
+			if ( ! saved || ! saved.items || ! saved.items.length ) { return; }
+
+			scanItems   = saved.items;
+			totalImages = saved.total;
+
+			saved.items.forEach( function ( item ) { appendScanRow( item ); } );
+			finishScan( saved.total, saved.time );
+		} catch ( e ) {}
+	}() );
+
+	// =========================================================================
+	// SCAN
+	// =========================================================================
+
+	$scanBtn.on( 'click', function () {
+		// Reset + clear previous scan cache.
+		try { localStorage.removeItem( LS_KEY ); } catch ( e ) {}
+		scanItems   = [];
+		totalImages = 0;
+		optTotal    = 0;
+		$tbody.empty();
+		$results.hide();
+		$optimizeBtn.hide();
+		$optProg.hide();
+		$scanProg.show();
+		$scanBar.css( 'width', '0%' );
+		$scanStatus.text( 'Preparando escaneo...' );
+		$scanBtn.prop( 'disabled', true ).text( 'Escaneando...' );
+
+		// Fetch totals first.
+		$.post( cfg.ajaxUrl, { action: 'ultimizer_get_stats', nonce: cfg.nonce }, function ( r ) {
+			if ( r.success ) {
+				totalImages = parseInt( r.data.optimized, 10 ) + parseInt( r.data.unoptimized, 10 );
+				optTotal    = parseInt( r.data.unoptimized, 10 );
+			}
+			runScanBatch( 0, totalImages );
+		} );
+	} );
+
+	function runScanBatch( offset, total ) {
+		$.post( cfg.ajaxUrl, {
+			action: 'ultimizer_scan_batch',
+			nonce:  cfg.nonce,
+			limit:  20,
+			offset: offset
+		}, function ( r ) {
+			if ( ! r.success ) {
+				$scanStatus.text( 'Error al escanear la biblioteca.' );
+				resetScanBtn();
+				return;
+			}
+
+			var data = r.data;
+
+			// Update real total from server.
+			if ( ! total ) { total = data.total; }
+
+			data.items.forEach( function ( item ) {
+				scanItems.push( item );
+				appendScanRow( item );
+			} );
+
+			var scanned = data.offset;
+			var pct     = total > 0 ? Math.min( 100, Math.round( scanned / total * 100 ) ) : 0;
+			$scanBar.css( 'width', pct + '%' );
+			$scanStatus.text( 'Escaneando… ' + scanned + ' / ' + data.total );
+
+			if ( data.done ) {
+				finishScan( data.total );
+			} else {
+				setTimeout( function () { runScanBatch( data.offset, data.total ); }, 80 );
+			}
+		} ).fail( function () {
+			$scanStatus.text( 'Error de conexión.' );
+			resetScanBtn();
+		} );
 	}
 
-	var cfg        = ultimizerData;
-	var running    = false;
-	var paused     = false;
-	var totalStart = 0;
-	var processed  = 0;
-	var savedBytes = 0;
-
-	var $startBtn    = $('#ult-start-bulk');
-	var $pauseBtn    = $('#ult-pause-bulk');
-	var $progressWrap = $('#ult-bulk-progress-wrap');
-	var $progressFill = $('#ult-progress-fill');
-	var $progressPct  = $('#ult-progress-pct');
-	var $progressLbl  = $('#ult-progress-label');
-	var $log          = $('#ult-bulk-log');
-	var $remaining    = $('#ult-unoptimized-count');
-
-	// -------------------------------------------------------------------------
-	// Inicio
-	// -------------------------------------------------------------------------
-
-	$startBtn.on('click', function () {
-		if (running) return;
-
-		running    = true;
-		paused     = false;
-		processed  = 0;
-		savedBytes = 0;
-
-		// Obtener el total actual antes de empezar.
-		getStats(function (stats) {
-			totalStart = parseInt(stats.optimized, 10) + parseInt(stats.unoptimized, 10);
-
-			$startBtn.hide();
-			$pauseBtn.show();
-			$progressWrap.show();
-			$progressLbl.text(cfg.strings.running);
-
-			processBatch();
-		});
-	});
-
-	// -------------------------------------------------------------------------
-	// Pausa / Reanudar
-	// -------------------------------------------------------------------------
-
-	$pauseBtn.on('click', function () {
-		if (!running) return;
-
-		paused = !paused;
-
-		if (paused) {
-			$pauseBtn.text(cfg.strings.resume);
-			$progressLbl.text(cfg.strings.paused);
+	function appendScanRow( item ) {
+		var isOpt     = item.is_optimized;
+		var isExcl    = item.is_excluded;
+		var statusHtml;
+		if ( isExcl ) {
+			statusHtml = '<span class="ult-pill gray sm">Excluida</span>';
+		} else if ( isOpt ) {
+			statusHtml = '<span class="ult-pill green sm">Optimizada</span>';
 		} else {
-			$pauseBtn.text(cfg.strings.pause);
-			$progressLbl.text(cfg.strings.running);
-			processBatch();
+			statusHtml = '<span class="ult-pill amber sm">Pendiente</span>';
 		}
-	});
 
-	// -------------------------------------------------------------------------
-	// Restaurar respaldos
-	// -------------------------------------------------------------------------
+		var savings  = isOpt
+			? ( '<strong>' + item.savings_pct_actual + '%</strong>' )
+			: ( isExcl ? '—' : '~' + item.estimated_savings_pct + '% <small>est. (' + esc( item.estimated_savings_hr ) + ')</small>' );
+		var thumb    = item.thumb_url
+			? '<img src="' + esc( item.thumb_url ) + '" alt="" class="ult-thumb">'
+			: '<span class="ult-no-thumb dashicons dashicons-format-image"></span>';
 
-	$(document).on('click', '.ult-restore-btn', function () {
-		var $btn = $(this);
-		var id   = $btn.data('id');
+		var rowClass = isExcl ? ' class="ult-row-excluded"' : ( isOpt ? ' class="ult-row-done"' : '' );
 
-		if (!id) return;
-		if (!confirm('¿Restaurar la imagen original? Esto eliminará la versión optimizada.')) return;
-
-		$btn.prop('disabled', true).text('Restaurando...');
-
-		$.post(cfg.ajaxUrl, {
-			action:        'ultimizer_restore_backup',
-			nonce:         cfg.nonce,
-			attachment_id: id
-		}, function (resp) {
-			if (resp.success) {
-				$btn.closest('tr').css('opacity', '0.5');
-				$btn.text('Restaurado ✓');
-			} else {
-				alert('Error: ' + (resp.data || 'No se pudo restaurar.'));
-				$btn.prop('disabled', false).text('Restaurar original');
-			}
-		}).fail(function () {
-			alert('Error de conexión.');
-			$btn.prop('disabled', false).text('Restaurar original');
-		});
-	});
-
-	// -------------------------------------------------------------------------
-	// Vaciar log
-	// -------------------------------------------------------------------------
-
-	$(document).on('click', '#ult-clear-log', function () {
-		if (!confirm('¿Vaciar todo el registro? Esta acción no se puede deshacer.')) return;
-
-		var $btn = $(this);
-		$btn.prop('disabled', true);
-
-		$.post(cfg.ajaxUrl, {
-			action: 'ultimizer_clear_log',
-			nonce:  cfg.nonce
-		}, function (resp) {
-			if (resp.success) {
-				location.reload();
-			} else {
-				alert('Error: ' + (resp.data || 'No se pudo vaciar el registro.'));
-				$btn.prop('disabled', false);
-			}
-		}).fail(function () {
-			alert('Error de conexión.');
-			$btn.prop('disabled', false);
-		});
-	});
-
-	// -------------------------------------------------------------------------
-	// Funciones internas
-	// -------------------------------------------------------------------------
-
-	function getStats(callback) {
-		$.post(cfg.ajaxUrl, {
-			action: 'ultimizer_get_stats',
-			nonce:  cfg.nonce
-		}, function (resp) {
-			if (resp.success && typeof callback === 'function') {
-				callback(resp.data);
-			}
-		});
+		$tbody.append(
+			'<tr id="ult-row-' + item.id + '"' + rowClass + '>' +
+			'<td class="col-exclude"><input type="checkbox" class="ult-excl-cb" data-id="' + item.id + '"' + ( isExcl ? ' checked' : '' ) + ' title="Excluir de la optimizaci\u00f3n"></td>' +
+			'<td class="col-thumb">' + thumb + '</td>' +
+			'<td><span class="ult-filename">' + esc( item.filename ) + '</span></td>' +
+			'<td><span class="ult-pill gray sm">' + fmtMime( item.mime_type ) + '</span></td>' +
+			'<td>' + esc( item.current_size_hr ) + '</td>' +
+			'<td>' + savings + '</td>' +
+			'<td class="ult-col-status">' + statusHtml + '</td>' +
+			'</tr>'
+		);
 	}
 
-	function processBatch() {
-		if (!running || paused) return;
+	function finishScan( total ) {
+		$scanProg.hide();
+		$results.show();
+		resetScanBtn( 'Volver a escanear' );
 
-		$.post(cfg.ajaxUrl, {
+		var pending = scanItems.filter( function ( i ) { return ! i.is_optimized && ! i.is_excluded; } );
+		optTotal = pending.length; // sync with items that will actually be processed.
+
+		var estBytes = 0;
+		pending.forEach( function ( i ) {
+			estBytes += Math.round( i.current_size * ( i.estimated_savings_pct / 100 ) );
+		} );
+
+		$summary.html(
+			'<div class="ult-results-summary-inner">' +
+			'<span><strong>' + total + '</strong> imágenes en la biblioteca</span>' +
+			'<span><strong>' + pending.length + '</strong> pendientes de optimizar</span>' +
+			'<span>Ahorro estimado: <strong>' + fmtBytes( estBytes ) + '</strong></span>' +
+			'</div>'
+		);
+
+		if ( pending.length > 0 ) {
+			$optimizeBtn.show();
+		}
+	}
+
+	function resetScanBtn( label ) {
+		$scanBtn.prop( 'disabled', false ).html(
+			'<span class="dashicons dashicons-search"></span>&nbsp;' + ( label || 'Escanear biblioteca' )
+		);
+	}
+
+	// =========================================================================
+	// OPTIMIZATION
+	// =========================================================================
+
+	$optimizeBtn.on( 'click', function () {
+		if ( optimizing ) { return; }
+		optimizing        = true;
+		paused            = false;
+		optDone           = 0;
+		startTime         = Date.now();
+		sessionSavedBytes = 0;
+		sessionSavedPcts  = [];
+
+		// Warn if the user tries to leave while optimizing.
+		window.onbeforeunload = function () {
+			return 'La optimizaci\u00f3n est\u00e1 en curso. Si sales, el lote actual terminar\u00e1 en el servidor pero no se procesar\u00e1n m\u00e1s im\u00e1genes hasta que vuelvas a iniciarla.';
+		};
+
+		// Start timer.
+		timerInterval = setInterval( function () {
+			if ( ! paused && optimizing ) {
+				var elapsed = Math.floor( ( Date.now() - startTime ) / 1000 );
+				var mm = String( Math.floor( elapsed / 60 ) ).padStart( 2, '0' );
+				var ss = String( elapsed % 60 ).padStart( 2, '0' );
+				$( '#ult-opt-timer' ).text( mm + ':' + ss );
+			}
+		}, 1000 );
+
+		$optimizeBtn.hide();
+		$pauseBtn.show().text( 'Pausar' );
+		$optProg.show();
+		updateOptUI();
+		runOptBatch();
+	} );
+
+	$pauseBtn.on( 'click', function () {
+		paused = ! paused;
+		if ( paused ) {
+			$pauseBtn.text( 'Reanudar' );
+			$optStatus.text( 'En pausa' );
+		} else {
+			$pauseBtn.text( 'Pausar' );
+			$optStatus.text( 'Optimizando...' );
+			runOptBatch();
+		}
+	} );
+
+	function runOptBatch() {
+		if ( ! optimizing || paused ) { return; }
+
+		$.post( cfg.ajaxUrl, {
 			action:     'ultimizer_bulk_process_batch',
 			nonce:      cfg.nonce,
 			batch_size: cfg.batchSize
-		}, function (resp) {
-			if (!resp.success) {
-				appendLog(cfg.strings.error + ': ' + (resp.data || ''), 'error');
-				finishRun();
+		}, function ( r ) {
+			if ( ! r.success ) {
+				$optStatus.text( 'Error procesando el lote.' );
+				finishOpt();
 				return;
 			}
 
-			var data = resp.data;
+			var data = r.data;
 
-			processed  += parseInt(data.processed, 10);
-			savedBytes += parseSavedBytes(data.total_saved);
-
-			// Actualizar contador visible de pendientes.
-			$remaining.text(numberFormat(data.remaining));
-
-			// Actualizar barra de progreso.
-			if (totalStart > 0) {
-				var done    = totalStart - data.remaining;
-				var percent = Math.min(100, Math.round((done / totalStart) * 100));
-				$progressFill.css('width', percent + '%');
-				$progressPct.text(percent + '%');
-			}
-
-			// Log de los resultados del lote.
-			if (data.results && data.results.length) {
-				data.results.forEach(function (item) {
-					if (item.error) {
-						appendLog('#' + item.id + ' → Error: ' + item.error, 'error');
-					} else if (item.skipped) {
-						appendLog('#' + item.id + ' → Omitida (ya optimizada)', 'skip');
-					} else {
-						var extras = [];
-						if (item.avif) extras.push('AVIF');
-						if (item.webp) extras.push('WebP');
-						appendLog(
-							'#' + item.id + ' → ↓' + item.savings_percent + '%  ' +
-							(extras.length ? '(' + extras.join(', ') + ' generados)' : ''),
-							'success'
-						);
-					}
-				});
-			}
-
-			// Actualizar etiqueta de progreso.
-			$progressLbl.text(
-				cfg.strings.running + ' — ' + numberFormat(data.remaining) + ' pendientes'
-			);
-
-			if (data.done) {
-				finishRun();
-				return;
-			}
-
-			// Siguiente lote con pequeña pausa para no saturar el servidor.
-			setTimeout(function () {
-				if (!paused) {
-					processBatch();
+			// Update rows in the scan table.
+			data.results.forEach( function ( item ) {
+				if ( item.error || item.skipped ) { return; }
+				var $row = $( '#ult-row-' + item.id );
+				if ( $row.length ) {
+					$row.find( '.ult-col-status' ).html( '<span class="ult-pill green sm">Optimizada</span>' );
+					$row.find( 'td:eq(5)' ).html( '<strong>' + item.savings_percent + '%</strong> <small>' + fmtBytes( item.savings_bytes ) + '</small>' );
+					$row.removeClass( 'ult-row-excluded' ).addClass( 'ult-row-done' );
 				}
-			}, 300);
+				// Accumulate for stat cards.
+				sessionSavedBytes += ( item.savings_bytes || 0 );
+				if ( item.savings_percent ) { sessionSavedPcts.push( parseFloat( item.savings_percent ) ); }
+			} );
 
-		}).fail(function () {
-			appendLog('Error de conexión con el servidor.', 'error');
-			finishRun();
-		});
+			// Progress based on remaining (accurate with skipped/errors).
+			optDone = Math.max( optDone, optTotal - data.remaining );
+			$pending.text( data.remaining );
+			updateOptUI();
+			updateStatCards( data.remaining );
+
+			if ( data.done || data.remaining === 0 ) {
+				finishOpt();
+				return;
+			}
+
+			setTimeout( function () {
+				if ( ! paused ) { runOptBatch(); }
+			}, 300 );
+
+		} ).fail( function () {
+			$optStatus.text( 'Error de conexión.' );
+			finishOpt();
+		} );
 	}
 
-	function finishRun() {
-		running = false;
+	function updateOptUI() {
+		var pct = optTotal > 0 ? Math.min( 100, Math.round( optDone / optTotal * 100 ) ) : 0;
+		$optBar.css( 'width', pct + '%' );
+		$optPct.text( pct + '%' );
+		$optStatus.text( 'Procesando ' + optDone + ' de ' + optTotal );
+	}
+
+	// Updates stat cards in real time while optimizing.
+	function updateStatCards( remaining ) {
+		// Optimized = total - remaining (excluding excluded items).
+		var total   = parseInt( $( '#ult-stat-total' ).text().replace( /\D/g, '' ), 10 ) || 0;
+		var newOpt  = total - remaining;
+		$statOpt.text( newOpt );
+		$pending.text( remaining );
+
+		// Savings accumulated this session plus what was already present on page load.
+		if ( sessionSavedBytes > 0 ) {
+			$statSavings.text( fmtBytes( sessionSavedBytes ) + '+' );
+		}
+
+		// Average reduction for this session.
+		if ( sessionSavedPcts.length > 0 ) {
+			var sum = sessionSavedPcts.reduce( function ( a, b ) { return a + b; }, 0 );
+			$statAvg.text( ( sum / sessionSavedPcts.length ).toFixed( 1 ) + '%' );
+		}
+	}
+
+	function finishOpt() {
+		optimizing = false;
+		window.onbeforeunload = null; // remove leave warning.
+		clearInterval( timerInterval );
+
+		var elapsed = startTime ? Math.floor( ( Date.now() - startTime ) / 1000 ) : 0;
+		var mm = String( Math.floor( elapsed / 60 ) ).padStart( 2, '0' );
+		var ss = String( elapsed % 60 ).padStart( 2, '0' );
+
 		$pauseBtn.hide();
-		$startBtn.show().text('Optimización completada ✓').prop('disabled', true);
-		$progressFill.css('width', '100%');
-		$progressPct.text('100%');
-		$progressLbl.text(cfg.strings.done);
+		$optBar.css( 'width', '100%' );
+		$optPct.text( '100%' );
+		$optStatus.html( 'Optimización completada ✓ &nbsp;<small>Tiempo total: ' + mm + ':' + ss + '</small>' );
+		$optimizeBtn.hide();
 	}
 
-	function appendLog(text, type) {
-		var cls = type || 'info';
-		$log.append('<div class="log-line ' + cls + '">' + escHtml(text) + '</div>');
-		$log.scrollTop($log[0].scrollHeight);
+	// =========================================================================
+	// EXCLUDE / INCLUDE image
+	// =========================================================================
+
+	$( document ).on( 'change', '.ult-excl-cb', function () {
+		var $cb  = $( this );
+		var id   = parseInt( $cb.data( 'id' ), 10 );
+		var excl = $cb.is( ':checked' ) ? '1' : '0';
+
+		$cb.prop( 'disabled', true );
+
+		$.post( cfg.ajaxUrl, {
+			action:        'ultimizer_toggle_exclude',
+			nonce:         cfg.nonce,
+			attachment_id: id,
+			exclude:       excl
+		}, function ( r ) {
+			$cb.prop( 'disabled', false );
+			if ( ! r.success ) { $cb.prop( 'checked', ! $cb.is( ':checked' ) ); return; }
+
+			var $row = $( '#ult-row-' + id );
+			if ( excl === '1' ) {
+				$row.addClass( 'ult-row-excluded' ).removeClass( 'ult-row-done' );
+				$row.find( '.ult-col-status' ).html( '<span class="ult-pill gray sm">Excluida</span>' );
+				$row.find( 'td:eq(5)' ).text( '—' );
+			} else {
+				$row.removeClass( 'ult-row-excluded' );
+				$row.find( '.ult-col-status' ).html( '<span class="ult-pill amber sm">Pendiente</span>' );
+			}
+			// Update pending counter in stats strip.
+			$pending.text( r.data.pending );
+
+			// Show or hide optimize button.
+			var hasPending = $tbody.find( '.ult-pill.amber' ).length > 0;
+			if ( hasPending ) { $optimizeBtn.show(); } else { $optimizeBtn.hide(); }
+		} ).fail( function () {
+			$cb.prop( 'disabled', false ).prop( 'checked', ! $cb.is( ':checked' ) );
+		} );
+	} );
+
+	// =========================================================================
+	// RESTORE BACKUP
+	// =========================================================================
+
+	$( document ).on( 'click', '.ult-restore-btn', function () {
+		var $btn = $( this );
+		var id   = parseInt( $btn.data( 'id' ), 10 );
+		if ( ! id ) { return; }
+		if ( ! confirm( '¿Restaurar la imagen original? La versión optimizada será reemplazada.' ) ) { return; }
+
+		$btn.prop( 'disabled', true ).text( 'Restaurando...' );
+
+		$.post( cfg.ajaxUrl, {
+			action:        'ultimizer_restore_backup',
+			nonce:         cfg.nonce,
+			attachment_id: id
+		}, function ( r ) {
+			if ( r.success ) {
+				$btn.closest( 'tr' ).css( 'opacity', '.5' );
+				$btn.text( 'Restaurado ✓' );
+			} else {
+				alert( 'Error: ' + ( r.data || 'No se pudo restaurar.' ) );
+				$btn.prop( 'disabled', false ).text( 'Restaurar original' );
+			}
+		} ).fail( function () {
+			alert( 'Error de conexión.' );
+			$btn.prop( 'disabled', false ).text( 'Restaurar original' );
+		} );
+	} );
+
+	// =========================================================================
+	// DELETE SINGLE BACKUP
+	// =========================================================================
+
+	$( document ).on( 'click', '.ult-delete-backup-btn', function () {
+		var $btn = $( this );
+		var id   = parseInt( $btn.data( 'id' ), 10 );
+		if ( ! id ) { return; }
+		if ( ! confirm( '¿Eliminar el respaldo de esta imagen? No podrás restaurar la versión original.' ) ) { return; }
+
+		$btn.prop( 'disabled', true ).text( 'Eliminando...' );
+
+		$.post( cfg.ajaxUrl, {
+			action:        'ultimizer_delete_backup',
+			nonce:         cfg.nonce,
+			attachment_id: id
+		}, function ( r ) {
+			if ( r.success ) {
+				$( '#ult-backup-row-' + id ).fadeOut( 300, function () { $( this ).remove(); } );
+				// Update count and size in header.
+				var $pill = $( '.ult-count-pill' ).first();
+				var remaining = r.data.remaining_count;
+				$pill.text( remaining + ( remaining === 1 ? ' archivo' : ' archivos' ) );
+				$( '#ult-backup-total-size' ).text( r.data.remaining_size + ' en disco' );
+				if ( remaining === 0 ) {
+					$( '#ult-delete-all-backups' ).hide();
+					$( '.ult-table-wrap' ).replaceWith(
+						'<div class="ult-empty"><span class="dashicons dashicons-backup"></span><p>No hay respaldos aún.</p></div>'
+					);
+				}
+			} else {
+				alert( 'Error: ' + ( r.data || 'No se pudo eliminar.' ) );
+				$btn.prop( 'disabled', false ).text( 'Eliminar respaldo' );
+			}
+		} ).fail( function () {
+			alert( 'Error de conexión.' );
+			$btn.prop( 'disabled', false ).text( 'Eliminar respaldo' );
+		} );
+	} );
+
+	// =========================================================================
+	// DELETE ALL BACKUPS
+	// =========================================================================
+
+	$( document ).on( 'click', '#ult-delete-all-backups', function () {
+		if ( ! confirm( '¿Eliminar TODOS los respaldos? Esta acción no se puede deshacer. Sin respaldos no podrás restaurar ninguna imagen a su estado original.' ) ) { return; }
+
+		var $btn = $( this );
+		$btn.prop( 'disabled', true ).text( 'Eliminando...' );
+
+		$.post( cfg.ajaxUrl, {
+			action: 'ultimizer_delete_all_backups',
+			nonce:  cfg.nonce
+		}, function ( r ) {
+			if ( r.success ) { location.reload(); }
+			else { alert( 'Error.' ); $btn.prop( 'disabled', false ).text( 'Eliminar todos los respaldos' ); }
+		} ).fail( function () {
+			alert( 'Error de conexión.' );
+			$btn.prop( 'disabled', false ).text( 'Eliminar todos los respaldos' );
+		} );
+	} );
+
+	// =========================================================================
+	// CLEAR LOG
+	// =========================================================================
+
+	$( document ).on( 'click', '#ult-clear-log', function () {
+		if ( ! confirm( '¿Vaciar todo el registro? Esta acción no se puede deshacer.' ) ) { return; }
+
+		var $btn = $( this );
+		$btn.prop( 'disabled', true );
+
+		$.post( cfg.ajaxUrl, {
+			action: 'ultimizer_clear_log',
+			nonce:  cfg.nonce
+		}, function ( r ) {
+			if ( r.success ) { location.reload(); }
+			else { alert( 'Error.' ); $btn.prop( 'disabled', false ); }
+		} );
+	} );
+
+	// =========================================================================
+	// HELPERS
+	// =========================================================================
+
+	function fmtMime( mime ) {
+		var map = { 'image/jpeg': 'JPEG', 'image/png': 'PNG', 'image/gif': 'GIF', 'image/webp': 'WebP' };
+		return map[ mime ] || mime;
 	}
 
-	function numberFormat(n) {
-		return parseInt(n, 10).toLocaleString();
+	function fmtBytes( b ) {
+		if ( b >= 1048576 ) { return ( b / 1048576 ).toFixed( 1 ) + ' MB'; }
+		if ( b >= 1024 )    { return Math.round( b / 1024 ) + ' KB'; }
+		return b + ' B';
 	}
 
-	function parseSavedBytes(str) {
-		// La cadena viene formateada (e.g. "1.5 MB"), se ignora para cálculo.
-		return 0;
+	function esc( s ) {
+		return String( s )
+			.replace( /&/g, '&amp;' )
+			.replace( /</g, '&lt;'  )
+			.replace( />/g, '&gt;'  )
+			.replace( /"/g, '&quot;' );
 	}
 
-	function escHtml(str) {
-		return String(str)
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;');
-	}
-
-}(jQuery));
+}( jQuery ) );

@@ -1,38 +1,30 @@
 <?php
-/**
- * Gestión de respaldos: crea una copia del archivo original antes de optimizarlo
- * y permite restaurarlo si es necesario.
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 class Ultimizer_Backup {
 
-	/** Carpeta de respaldos dentro de uploads. */
+	/** Backup folder inside uploads. */
 	const BACKUP_FOLDER = 'ultimizer-backups';
 
 	// -------------------------------------------------------------------------
-	// Inicialización
+	// Initialization
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Crea la carpeta de respaldos y protege con .htaccess si no existe.
-	 */
 	public static function create_backup_dir() {
 		$dir = self::get_backup_dir();
 		if ( ! file_exists( $dir ) ) {
 			wp_mkdir_p( $dir );
 		}
 
-		// Evitar acceso web directo a los respaldos.
+		// Prevent direct web access to backups.
 		$htaccess = $dir . '.htaccess';
 		if ( ! file_exists( $htaccess ) ) {
 			file_put_contents( $htaccess, "Deny from all\n" );
 		}
 
-		// index.php de seguridad.
+		// Security index.php.
 		$index = $dir . 'index.php';
 		if ( ! file_exists( $index ) ) {
 			file_put_contents( $index, "<?php // Silence is golden.\n" );
@@ -40,16 +32,9 @@ class Ultimizer_Backup {
 	}
 
 	// -------------------------------------------------------------------------
-	// Crear respaldo
+	// Create backup
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Copia el archivo original al directorio de respaldos.
-	 *
-	 * @param  int    $attachment_id
-	 * @param  string $file_path  Ruta absoluta al archivo de adjunto.
-	 * @return string|false  Ruta al respaldo o false si falla.
-	 */
 	public function create( $attachment_id, $file_path ) {
 		if ( ! file_exists( $file_path ) ) {
 			return false;
@@ -59,7 +44,7 @@ class Ultimizer_Backup {
 
 		$backup_path = $this->get_backup_path( $attachment_id, $file_path );
 
-		// Solo crear respaldo si todavía no existe (no sobreescribir el original).
+		// Only create backup if it doesn't already exist (do not overwrite the original).
 		if ( file_exists( $backup_path ) ) {
 			return $backup_path;
 		}
@@ -78,15 +63,9 @@ class Ultimizer_Backup {
 	}
 
 	// -------------------------------------------------------------------------
-	// Restaurar respaldo
+	// Restore backup
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Restaura el archivo original desde el respaldo y limpia los meta de optimización.
-	 *
-	 * @param  int $attachment_id
-	 * @return true|WP_Error
-	 */
 	public function restore( $attachment_id ) {
 		$backup_path = $this->find_backup_file( $attachment_id );
 
@@ -103,21 +82,21 @@ class Ultimizer_Backup {
 			return new WP_Error( 'restore_failed', 'No se pudo copiar el respaldo al destino.' );
 		}
 
-		// Limpiar todos los meta de optimización.
+		// Clear all optimization meta.
 		delete_post_meta( $attachment_id, '_ultimizer_optimized' );
 		delete_post_meta( $attachment_id, '_ultimizer_original_size' );
 		delete_post_meta( $attachment_id, '_ultimizer_optimized_size' );
 		delete_post_meta( $attachment_id, '_ultimizer_savings_bytes' );
 		delete_post_meta( $attachment_id, '_ultimizer_savings_pct' );
 
-		// Eliminar sidecars AVIF/WebP (formato correcto e incorrecto por compatibilidad).
+		// Delete AVIF/WebP sidecars (both correct and legacy formats for compatibility).
 		$base_path = preg_replace( '/\.[^.\/\\\\]+$/', '', $original_path );
 		foreach ( [ '.avif', '.webp' ] as $ext ) {
-			// Formato correcto: Livit-1.avif
+			// Correct format: image.avif
 			if ( file_exists( $base_path . $ext ) ) {
 				@unlink( $base_path . $ext );
 			}
-			// Formato antiguo malformado: Livit-1.jpg.avif
+			// Legacy malformed format: image.jpg.avif
 			if ( file_exists( $original_path . $ext ) ) {
 				@unlink( $original_path . $ext );
 			}
@@ -127,35 +106,23 @@ class Ultimizer_Backup {
 	}
 
 	// -------------------------------------------------------------------------
-	// Eliminar respaldo
+	// Delete backup
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Borra el archivo de respaldo de un adjunto.
-	 *
-	 * @param  int $attachment_id
-	 * @return bool
-	 */
 	public function delete( $attachment_id ) {
 		$backup_path = get_post_meta( $attachment_id, '_ultimizer_backup_path', true );
 		if ( $backup_path && file_exists( $backup_path ) ) {
 			@unlink( $backup_path );
+			$this->cleanup_empty_dirs( dirname( $backup_path ) );
 		}
 		delete_post_meta( $attachment_id, '_ultimizer_backup_path' );
 		return true;
 	}
 
 	// -------------------------------------------------------------------------
-	// Listar respaldos
+	// List backups
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Devuelve información sobre todos los adjuntos con respaldo.
-	 *
-	 * @param  int $limit
-	 * @param  int $offset
-	 * @return array
-	 */
 	public function get_backups( $limit = 50, $offset = 0 ) {
 		global $wpdb;
 
@@ -179,7 +146,7 @@ class Ultimizer_Backup {
 			$exists      = (bool) $path;
 			if ( ! $path ) { $path = $row['backup_path']; }
 			$size_bytes  = $exists ? (int) filesize( $path ) : 0;
-			// Detectar sidecars generados (AVIF/WebP) para el archivo original.
+			// Detect generated sidecars (AVIF/WebP) for the original file.
 			$orig_path   = get_attached_file( $att_id );
 			$base        = $orig_path ? preg_replace( '/\.[^.\/\\\\]+$/', '', $orig_path ) : '';
 			$backups[] = [
@@ -208,11 +175,6 @@ class Ultimizer_Backup {
 		);
 	}
 
-	/**
-	 * Calcula el tamaño total en bytes de todos los archivos de respaldo existentes.
-	 *
-	 * @return int
-	 */
 	public function get_total_backup_size() {
 		$total = 0;
 		$dir   = self::get_backup_dir();
@@ -226,22 +188,10 @@ class Ultimizer_Backup {
 		return $total;
 	}
 
-	/**
-	 * Elimina el respaldo de un adjunto (archivo + meta).
-	 * Alias público de delete() con nombre más explícito.
-	 *
-	 * @param  int $attachment_id
-	 * @return bool
-	 */
 	public function delete_backup( $attachment_id ) {
 		return $this->delete( $attachment_id );
 	}
 
-	/**
-	 * Elimina TODOS los respaldos de la base de datos y del disco.
-	 *
-	 * @return int  Número de respaldos eliminados.
-	 */
 	public function delete_all_backups() {
 		global $wpdb;
 
@@ -255,11 +205,7 @@ class Ultimizer_Backup {
 			$path = $this->find_backup_file( (int) $row['post_id'] );
 			if ( $path && file_exists( $path ) ) {
 				@unlink( $path );
-				// Eliminar el directorio del adjunto si quedó vacío.
-				$att_dir = dirname( $path );
-				if ( is_dir( $att_dir ) && count( glob( $att_dir . '/*' ) ) === 0 ) {
-					@rmdir( $att_dir );
-				}
+				$this->cleanup_empty_dirs( dirname( $path ) );
 			}
 			delete_post_meta( (int) $row['post_id'], '_ultimizer_backup_path' );
 			$count++;
@@ -271,6 +217,23 @@ class Ultimizer_Backup {
 	// -------------------------------------------------------------------------
 	// Helpers
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Walk up the directory tree removing empty directories until reaching the backup root.
+	 */
+	private function cleanup_empty_dirs( $dir ) {
+		$root = rtrim( self::get_backup_dir(), '/' );
+		$dir  = rtrim( str_replace( '\\', '/', $dir ), '/' );
+
+		while ( $dir && $dir !== $root && is_dir( $dir ) ) {
+			$entries = array_diff( scandir( $dir ), [ '.', '..' ] );
+			if ( count( $entries ) > 0 ) {
+				break;
+			}
+			@rmdir( $dir );
+			$dir = dirname( $dir );
+		}
+	}
 
 	public static function get_backup_dir() {
 		$upload_dir = wp_upload_dir();
@@ -285,21 +248,14 @@ class Ultimizer_Backup {
 		return self::get_backup_dir() . (int) $attachment_id . '/' . $relative;
 	}
 
-	/**
-	 * Intenta encontrar el archivo de respaldo de un adjunto.
-	 * Prueba la ruta guardada en meta y, como fallback, la recalcula desde get_attached_file().
-	 *
-	 * @param  int $attachment_id
-	 * @return string|false  Ruta absoluta al archivo si existe, false si no.
-	 */
 	private function find_backup_file( $attachment_id ) {
-		// 1. Intentar ruta guardada en meta.
+		// 1. Try stored path from meta.
 		$stored = get_post_meta( (int) $attachment_id, '_ultimizer_backup_path', true );
 		if ( $stored && file_exists( $stored ) ) {
 			return $stored;
 		}
 
-		// 2. Recalcular desde el archivo adjunto actual.
+		// 2. Recalculate from the current attached file.
 		$file_path = get_attached_file( (int) $attachment_id );
 		if ( $file_path ) {
 			$fresh = $this->get_backup_path( $attachment_id, $file_path );
@@ -309,7 +265,7 @@ class Ultimizer_Backup {
 			}
 		}
 
-		// 3. Escanear el subdirectorio del adjunto en la carpeta de respaldos.
+		// 3. Scan the attachment subdirectory in the backup folder.
 		$att_dir = self::get_backup_dir() . (int) $attachment_id . '/';
 		if ( is_dir( $att_dir ) ) {
 			$found = glob( $att_dir . '*/*' );

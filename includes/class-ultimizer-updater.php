@@ -1,37 +1,26 @@
 <?php
-/**
- * Actualizador automático desde GitHub Releases.
- *
- * Configuración:
- *   - Ir a Ultimizer → Configuración y rellenar el campo "Usuario de GitHub".
- *   - El repositorio debe llamarse "ultimizer" y publicar releases con tags versionados (p.e. v1.0.1).
- *   - Los releases deben incluir el .zip del plugin como asset o usar el zipball_url de GitHub.
- *
- * Basado en el patrón de plugin-update-checker adaptado a dependencias cero.
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 class Ultimizer_Updater {
 
-	/** @var string Ruta completa al archivo principal del plugin. */
+	/** @var string */
 	private $file;
 
-	/** @var string Plugin basename: "ultimizer/ultimizer.php" */
+	/** @var string */
 	private $basename;
 
-	/** @var bool Si el plugin está activo actualmente. */
+	/** @var bool */
 	private $active;
 
-	/** @var string Usuario de GitHub. */
-	private $github_user;
+	/** @var string */
+	private $github_user = 'kerackdiaz';
 
-	/** @var string Nombre del repositorio GitHub. */
+	/** @var string */
 	private $github_repo = 'ultimizer';
 
-	/** @var string|null Caché de la respuesta de la API de GitHub. */
+	/** @var object|null */
 	private $release_info = null;
 
 	// -------------------------------------------------------------------------
@@ -50,13 +39,10 @@ class Ultimizer_Updater {
 	public function setup() {
 		$this->basename = plugin_basename( $this->file );
 		$this->active   = is_plugin_active( $this->basename );
-
-		$settings          = get_option( 'ultimizer_settings', [] );
-		$this->github_user = isset( $settings['github_user'] ) ? sanitize_text_field( $settings['github_user'] ) : '';
 	}
 
 	// -------------------------------------------------------------------------
-	// Obtener información del último release en GitHub
+	// GitHub release info
 	// -------------------------------------------------------------------------
 
 	private function fetch_release_info() {
@@ -99,7 +85,7 @@ class Ultimizer_Updater {
 			return null;
 		}
 
-		// Cachear 12 horas.
+		// Cache 12 hours.
 		set_transient( $cache_key, $info, 12 * HOUR_IN_SECONDS );
 		$this->release_info = $info;
 
@@ -110,12 +96,6 @@ class Ultimizer_Updater {
 	// Hooks de WordPress Update API
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Inyecta información de actualización en el transient de WordPress.
-	 *
-	 * @param  object $transient
-	 * @return object
-	 */
 	public function check_for_update( $transient ) {
 		if ( empty( $transient->checked ) || empty( $this->basename ) ) {
 			return $transient;
@@ -147,14 +127,6 @@ class Ultimizer_Updater {
 		return $transient;
 	}
 
-	/**
-	 * Proporciona detalles del plugin para el diálogo de "Ver detalles del plugin".
-	 *
-	 * @param  false|object|array $result
-	 * @param  string             $action
-	 * @param  object             $args
-	 * @return false|object
-	 */
 	public function plugin_info( $result, $action, $args ) {
 		if ( 'plugin_information' !== $action ) {
 			return $result;
@@ -188,14 +160,6 @@ class Ultimizer_Updater {
 		];
 	}
 
-	/**
-	 * Mueve el directorio extraído al directorio correcto del plugin tras instalar.
-	 *
-	 * @param  bool  $response
-	 * @param  array $hook_extra
-	 * @param  array $result
-	 * @return array
-	 */
 	public function after_install( $response, $hook_extra, $result ) {
 		global $wp_filesystem;
 
@@ -221,13 +185,6 @@ class Ultimizer_Updater {
 	// Helpers
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Determina la URL de descarga del release.
-	 * Prefiere el primer asset .zip; si no hay, usa el zipball de GitHub.
-	 *
-	 * @param  object $release
-	 * @return string
-	 */
 	private function get_download_url( $release ) {
 		if ( ! empty( $release->assets ) && is_array( $release->assets ) ) {
 			foreach ( $release->assets as $asset ) {

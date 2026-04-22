@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Exclude from GitHub release zip
+.gitattributes    export-ignore
+.gitignore        export-ignore
+README.md         export-ignore

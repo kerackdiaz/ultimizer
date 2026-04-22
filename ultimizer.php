@@ -1,15 +1,14 @@
 <?php
 /**
  * Plugin Name: Ultimizer
- * Plugin URI:  https://github.com/YOUR_GITHUB_USER/ultimizer
- * Description: Optimización avanzada de imágenes: AVIF/WebP, eliminación de metadatos, respaldos automáticos, procesamiento masivo y actualizaciones desde GitHub.
+ * Plugin URI:  https://github.com/kerackdiaz/ultimizer
+ * Description: Optimización de imágenes para WordPress: compresión JPEG/PNG/GIF, conversión a AVIF y WebP, respaldos y optimización masiva.
  * Version:     1.0.0
- * Author:      Ricardo Diaz
+ * Author:      Kerack Diaz
+ * Author URI:  https://github.com/kerackdiaz
  * License:     GPL-2.0+
  * Text Domain: ultimizer
- *
- * GitHub Plugin URI: YOUR_GITHUB_USER/ultimizer
- * Primary Branch:    main
+ * @package Ultimizer
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -28,9 +27,6 @@ require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-frontend.php';
 require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-updater.php';
 require_once ULTIMIZER_PLUGIN_DIR . 'includes/class-ultimizer-admin.php';
 
-/**
- * Plugin principal – singleton.
- */
 final class Ultimizer {
 
 	private static $instance = null;
@@ -48,7 +44,6 @@ final class Ultimizer {
 		add_action( 'plugins_loaded', [ $this, 'init' ] );
 	}
 
-	/** Activación: crear tabla de log, carpeta de respaldos y reglas .htaccess. */
 	public function activate() {
 		Ultimizer_Logger::create_table();
 		Ultimizer_Backup::create_backup_dir();
@@ -60,7 +55,6 @@ final class Ultimizer {
 		( new Ultimizer_Optimizer() )->inject_htaccess_rules();
 	}
 
-	/** Desactivación: eliminar reglas .htaccess y limpiar caché de actualización. */
 	public function deactivate() {
 		( new Ultimizer_Optimizer() )->remove_htaccess_rules();
 		delete_transient( 'ultimizer_github_info' );
@@ -69,7 +63,6 @@ final class Ultimizer {
 	public function init() {
 		$settings = get_option( 'ultimizer_settings', Ultimizer_Optimizer::get_defaults() );
 
-		// Optimizar automáticamente al subir una imagen.
 		if ( ! empty( $settings['optimize_on_upload'] ) ) {
 			add_filter( 'wp_generate_attachment_metadata', [ $this, 'on_upload' ], 99, 2 );
 		}
@@ -78,18 +71,10 @@ final class Ultimizer {
 			new Ultimizer_Admin();
 			new Ultimizer_Updater( ULTIMIZER_PLUGIN_FILE );
 		} else {
-			// Frontend: entregar AVIF/WebP via <picture> (funciona en cualquier servidor).
 			new Ultimizer_Frontend();
 		}
 	}
 
-	/**
-	 * Hook en la subida de archivos adjuntos.
-	 *
-	 * @param array $metadata       Metadatos del adjunto.
-	 * @param int   $attachment_id  ID del adjunto.
-	 * @return array
-	 */
 	public function on_upload( $metadata, $attachment_id ) {
 		( new Ultimizer_Optimizer() )->optimize_attachment( (int) $attachment_id );
 		return $metadata;

@@ -1,19 +1,4 @@
 <?php
-/**
- * Clase principal de optimización de imágenes.
- *
- * Soporta:
- *   - Compresión JPEG (progresivo, calidad configurable, submuestreo 4:2:0)
- *   - Compresión PNG (nivel configurable)
- *   - Compresión GIF (capas optimizadas)
- *   - Compresión WebP
- *   - Conversión a AVIF (si Imagick lo soporta)
- *   - Conversión a WebP (Imagick o GD como respaldo)
- *   - Eliminación completa de metadatos EXIF/IPTC/XMP
- *   - Servicio transparente vía reglas .htaccess
- *   - Registro por adjunto y log global
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -35,7 +20,7 @@ class Ultimizer_Optimizer {
 		$stored         = get_option( 'ultimizer_settings', [] );
 		$this->settings = array_merge( self::get_defaults(), $stored );
 
-		// Comportamiento fijo: siempre activo.
+		// Fixed behaviour: always enabled.
 		$this->settings['convert_to_avif']    = true;
 		$this->settings['convert_to_webp']    = true;
 		$this->settings['strip_metadata']     = true;
@@ -60,21 +45,13 @@ class Ultimizer_Optimizer {
 	// Punto de entrada principal
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Optimiza un adjunto de WordPress y todos sus tamaños derivados.
-	 *
-	 * @param  int $attachment_id
-	 * @return array|WP_Error
-	 */
 	public function optimize_attachment( $attachment_id ) {
 		$attachment_id = (int) $attachment_id;
 
-		// Saltar imágenes excluidas.
 		if ( get_post_meta( $attachment_id, '_ultimizer_excluded', true ) ) {
 			return [ 'skipped' => true, 'reason' => 'excluded' ];
 		}
 
-		// Saltar si ya fue optimizado.
 		if (
 			! empty( $this->settings['skip_optimized'] ) &&
 			get_post_meta( $attachment_id, '_ultimizer_optimized', true )
@@ -92,11 +69,9 @@ class Ultimizer_Optimizer {
 			return [ 'skipped' => true, 'reason' => 'unsupported_mime' ];
 		}
 
-		// Crear respaldo antes de tocar el archivo.
 		$backup = new Ultimizer_Backup();
 		$backup->create( $attachment_id, $file_path );
 
-		// Limpiar sidecars malformados de versiones anteriores (Livit-1.jpg.avif → debe ser Livit-1.avif).
 		foreach ( [ '.avif', '.webp' ] as $ext ) {
 			$old = $file_path . $ext;
 			if ( file_exists( $old ) ) {
@@ -105,14 +80,11 @@ class Ultimizer_Optimizer {
 		}
 
 		$original_size = (int) filesize( $file_path );
-
-		// Optimizar el archivo principal.
 		$result = $this->optimize_file( $file_path, $mime_type );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
-		// Optimizar y convertir todos los tamaños derivados.
 		$metadata   = wp_get_attachment_metadata( $attachment_id );
 		$upload_dir = dirname( $file_path );
 
@@ -129,12 +101,10 @@ class Ultimizer_Optimizer {
 			}
 		}
 
-		// Generar AVIF/WebP para el archivo original.
 		$avif_generated = false;
 		$webp_generated = false;
 		$this->maybe_generate_modern_formats( $file_path, $avif_generated, $webp_generated );
 
-		// Asegurar que las reglas .htaccess existan para servir los formatos modernos.
 		self::inject_htaccess_rules();
 
 		clearstatcache( true, $file_path );
@@ -144,7 +114,6 @@ class Ultimizer_Optimizer {
 			? round( ( $savings_bytes / $original_size ) * 100, 2 )
 			: 0.0;
 
-		// Guardar estado en post meta.
 		update_post_meta( $attachment_id, '_ultimizer_optimized',      current_time( 'mysql' ) );
 		update_post_meta( $attachment_id, '_ultimizer_original_size',  $original_size );
 		update_post_meta( $attachment_id, '_ultimizer_optimized_size', $optimized_size );
@@ -180,13 +149,6 @@ class Ultimizer_Optimizer {
 	// Optimización de archivos individuales
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Determina el motor disponible y optimiza el archivo.
-	 *
-	 * @param  string $file_path
-	 * @param  string $mime_type
-	 * @return true|WP_Error
-	 */
 	private function optimize_file( $file_path, $mime_type ) {
 		if ( extension_loaded( 'imagick' ) ) {
 			return $this->optimize_imagick( $file_path, $mime_type );
@@ -194,15 +156,12 @@ class Ultimizer_Optimizer {
 		return $this->optimize_gd( $file_path, $mime_type );
 	}
 
-	/**
-	 * Optimización con Imagick (motor preferido).
-	 */
 	private function optimize_imagick( $file_path, $mime_type ) {
 		try {
 			$imagick = new Imagick();
 			$imagick->readImage( $file_path );
 
-			// Manejar animaciones GIF (múltiples frames).
+			// Handle GIF animations (multiple frames).
 			$is_animated = ( $imagick->getNumberImages() > 1 );
 
 			if ( ! empty( $this->settings['strip_metadata'] ) ) {
@@ -213,7 +172,7 @@ class Ultimizer_Optimizer {
 				case 'image/jpeg':
 					$imagick->setImageFormat( 'JPEG' );
 					$imagick->setImageCompressionQuality( (int) $this->settings['jpeg_quality'] );
-					$imagick->setInterlaceScheme( Imagick::INTERLACE_PLANE ); // JPEG progresivo.
+					$imagick->setInterlaceScheme( Imagick::INTERLACE_PLANE ); // Progressive JPEG.
 					$imagick->setSamplingFactors( [ '2x2', '1x1', '1x1' ] ); // 4:2:0 chroma.
 					break;
 
@@ -241,7 +200,7 @@ class Ultimizer_Optimizer {
 			$imagick->writeImage( $tmp_path );
 			$imagick->destroy();
 
-			// Solo reemplazar si el resultado ocupa menos espacio.
+			// Only replace if result is smaller.
 			if ( file_exists( $tmp_path ) ) {
 				if ( filesize( $tmp_path ) < filesize( $file_path ) ) {
 					rename( $tmp_path, $file_path );
@@ -256,9 +215,6 @@ class Ultimizer_Optimizer {
 		}
 	}
 
-	/**
-	 * Optimización con GD (motor de respaldo, no conserva metadatos).
-	 */
 	private function optimize_gd( $file_path, $mime_type ) {
 		$image = null;
 
@@ -323,16 +279,9 @@ class Ultimizer_Optimizer {
 	}
 
 	// -------------------------------------------------------------------------
-	// Generación de formatos modernos (AVIF / WebP)
+	// Modern format generation (AVIF / WebP)
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Genera AVIF y/o WebP si están habilitados y el servidor los soporta.
-	 *
-	 * @param  string $source_path
-	 * @param  bool   &$avif_out
-	 * @param  bool   &$webp_out
-	 */
 	private function maybe_generate_modern_formats( $source_path, &$avif_out = false, &$webp_out = false ) {
 		if ( ! empty( $this->settings['convert_to_avif'] ) && $this->supports_avif() ) {
 			$avif = $this->generate_avif( $source_path );
@@ -349,7 +298,7 @@ class Ultimizer_Optimizer {
 	}
 
 	private function generate_avif( $source_path ) {
-		// Nombre correcto: strip extensión original y añadir .avif (Livit-1.avif, no Livit-1.jpg.avif).
+		// Strip original extension and add .avif (image.avif, not image.jpg.avif).
 		$dest = preg_replace( '/\.[^.\/\\\\]+$/', '', $source_path ) . '.avif';
 		try {
 			$imagick = new Imagick( $source_path );
@@ -365,10 +314,10 @@ class Ultimizer_Optimizer {
 	}
 
 	private function generate_webp( $source_path ) {
-		// Nombre correcto: strip extensión original y añadir .webp (Livit-1.webp, no Livit-1.jpg.webp).
+		// Strip original extension and add .webp (image.webp, not image.jpg.webp).
 		$dest = preg_replace( '/\.[^.\/\\\\]+$/', '', $source_path ) . '.webp';
 
-		// Intento con Imagick.
+		// Try with Imagick.
 		if ( extension_loaded( 'imagick' ) ) {
 			try {
 				$imagick = new Imagick( $source_path );
@@ -379,11 +328,11 @@ class Ultimizer_Optimizer {
 				$imagick->destroy();
 				return $dest;
 			} catch ( Exception $e ) {
-				// Continúa con GD.
+				// Fall through to GD.
 			}
 		}
 
-		// Intento con GD.
+		// Try with GD.
 		if ( function_exists( 'imagewebp' ) ) {
 			$mime  = mime_content_type( $source_path );
 			$image = null;
@@ -402,7 +351,7 @@ class Ultimizer_Optimizer {
 	}
 
 	// -------------------------------------------------------------------------
-	// Detección de capacidades del servidor
+	// Server capability detection
 	// -------------------------------------------------------------------------
 
 	public function supports_avif() {
@@ -426,14 +375,9 @@ class Ultimizer_Optimizer {
 	}
 
 	// -------------------------------------------------------------------------
-	// Reglas .htaccess para servir AVIF/WebP de forma transparente
+	// .htaccess rules to serve AVIF/WebP transparently
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Escribe las reglas de reescritura en el .htaccess de uploads.
-	 * Usa los marcadores de WordPress para no sobreescribir otras reglas.
-	 * Solo tiene efecto en Apache; en nginx no hace nada pero tampoco rompe nada.
-	 */
 	public static function inject_htaccess_rules() {
 		if ( ! function_exists( 'insert_with_markers' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/misc.php';
@@ -445,12 +389,12 @@ class Ultimizer_Optimizer {
 		$rules = [
 			'<IfModule mod_rewrite.c>',
 			'  RewriteEngine On',
-			'  # Servir AVIF cuando el navegador lo soporta y existe el sidecar.',
+			'  # Serve AVIF when the browser supports it and the sidecar exists.',
 			'  RewriteCond %{HTTP_ACCEPT} image/avif',
 			'  RewriteCond %{REQUEST_FILENAME} (.+)\.(jpe?g|png|gif|webp)$',
 			'  RewriteCond %1.avif -f',
 			'  RewriteRule (.+)\.(jpe?g|png|gif|webp)$ $1.avif [T=image/avif,E=ult_modern:1,L]',
-			'  # Servir WebP cuando el navegador lo soporta y existe el sidecar.',
+			'  # Serve WebP when the browser supports it and the sidecar exists.',
 			'  RewriteCond %{HTTP_ACCEPT} image/webp',
 			'  RewriteCond %{REQUEST_FILENAME} (.+)\.(jpe?g|png|gif)$',
 			'  RewriteCond %1.webp -f',
@@ -464,9 +408,6 @@ class Ultimizer_Optimizer {
 		insert_with_markers( $htaccess, 'Ultimizer', $rules );
 	}
 
-	/**
-	 * Elimina las reglas del .htaccess de uploads al desactivar el plugin.
-	 */
 	public static function remove_htaccess_rules() {
 		if ( ! function_exists( 'insert_with_markers' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/misc.php';
@@ -481,16 +422,9 @@ class Ultimizer_Optimizer {
 	}
 
 	// -------------------------------------------------------------------------
-	// Consultas de estado
+	// Status queries
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Devuelve IDs de adjuntos aún no optimizados.
-	 *
-	 * @param  int $limit
-	 * @param  int $offset
-	 * @return int[]
-	 */
 	public function get_unoptimized_ids( $limit = 10, $offset = 0 ) {
 		global $wpdb;
 
@@ -558,13 +492,6 @@ class Ultimizer_Optimizer {
 		);
 	}
 
-	/**
-	 * Devuelve TODOS los IDs de adjuntos soportados (optimizados y pendientes).
-	 *
-	 * @param  int $limit
-	 * @param  int $offset
-	 * @return int[]
-	 */
 	public function get_all_ids( $limit = 20, $offset = 0 ) {
 		global $wpdb;
 
@@ -599,12 +526,6 @@ class Ultimizer_Optimizer {
 		);
 	}
 
-	/**
-	 * Analiza un adjunto y devuelve su estado sin modificarlo.
-	 *
-	 * @param  int $attachment_id
-	 * @return array|null
-	 */
 	public function scan_attachment( $attachment_id ) {
 		$attachment_id = (int) $attachment_id;
 		$file_path     = get_attached_file( $attachment_id );

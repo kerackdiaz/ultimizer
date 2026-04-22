@@ -1,14 +1,4 @@
 <?php
-/**
- * Ultimizer_Frontend – Entrega de imágenes modernas en el frontend.
- *
- * Convierte <img> en <picture> con <source type="image/avif"> y <source type="image/webp">
- * cuando existen los sidecars correspondientes.
- *
- * Funciona en cualquier servidor (Apache, Nginx, LiteSpeed, IIS…) porque la
- * negociación del formato la realiza el navegador, no el servidor.
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -29,28 +19,22 @@ class Ultimizer_Frontend {
 		$this->upload_url = untrailingslashit( $uploads['baseurl'] );
 		$this->upload_dir = untrailingslashit( $uploads['basedir'] );
 
-		// Contenido de entradas y páginas.
+		// Post and page content.
 		add_filter( 'the_content',             [ $this, 'process_html' ], 20 );
-		// Imágenes destacadas (thumbnails).
+		// Featured images (thumbnails).
 		add_filter( 'post_thumbnail_html',     [ $this, 'process_html' ], 20 );
-		// Widgets de texto.
+		// Text widgets.
 		add_filter( 'widget_text_content',     [ $this, 'process_html' ], 20 );
-		// Imágenes de adjuntos generadas con wp_get_attachment_image().
+		// Attachment images via wp_get_attachment_image().
 		add_filter( 'wp_get_attachment_image', [ $this, 'process_html' ], 20 );
-		// Bloques de galería y similares.
+		// Gallery blocks and similar.
 		add_filter( 'render_block',            [ $this, 'process_html' ], 20 );
 	}
 
 	// -------------------------------------------------------------------------
-	// Punto de entrada
+	// Entry point
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Reemplaza las etiquetas <img> que tienen sidecars AVIF/WebP por <picture>.
-	 *
-	 * @param  string $html
-	 * @return string
-	 */
 	public function process_html( $html ) {
 		if ( empty( $html ) || strpos( $html, '<img' ) === false ) {
 			return $html;
@@ -64,30 +48,30 @@ class Ultimizer_Frontend {
 	}
 
 	// -------------------------------------------------------------------------
-	// Procesamiento de cada <img>
+	// Process each <img>
 	// -------------------------------------------------------------------------
 
 	private function process_img_tag( $matches ) {
 		$attrs = $matches[1];
 		$img   = $matches[0];
 
-		// Extraer src (ignorar query string para buscar el archivo).
+		// Extract src (ignore query string for file lookup).
 		if ( ! preg_match( '/[\s]src=["\']([^"\']+)["\']/', $attrs, $src_m ) ) {
 			return $img;
 		}
 		$src       = $src_m[1];
 		$src_clean = strtok( $src, '?' );
 
-		// Solo procesar imágenes del directorio de uploads.
+		// Only process images from the uploads directory.
 		if ( strpos( $src_clean, $this->upload_url ) === false ) {
 			return $img;
 		}
 
-		// Verificar sidecars para el src principal.
+		// Check sidecars for the main src.
 		$file_path = $this->url_to_path( $src_clean );
 		$sidecars  = $this->check_sidecars( $file_path );
 
-		// Construir sources para srcset (imágenes responsivas) si existe.
+		// Build sources for srcset (responsive images) if present.
 		$sources = '';
 		if ( preg_match( '/[\s]srcset=["\']([^"\']+)["\']/', $attrs, $ss_m ) ) {
 			$sizes_attr = '';
@@ -95,7 +79,7 @@ class Ultimizer_Frontend {
 				$sizes_attr = ' sizes="' . esc_attr( $sz_m[1] ) . '"';
 			}
 
-			// Para srcset convertimos cada URL individualmente.
+			// For srcset, convert each URL individually.
 			if ( $sidecars['avif'] ) {
 				$avif_srcset = $this->convert_srcset( $ss_m[1], 'avif' );
 				if ( $avif_srcset ) {
@@ -109,7 +93,7 @@ class Ultimizer_Frontend {
 				}
 			}
 		} else {
-			// Sin srcset: source simple.
+			// No srcset: simple source.
 			$base_src = $this->strip_ext_url( $src_clean );
 			if ( $sidecars['avif'] ) {
 				$sources .= '<source type="image/avif" srcset="' . esc_url( $base_src . '.avif' ) . '">';
@@ -119,19 +103,19 @@ class Ultimizer_Frontend {
 			}
 		}
 
-		// Si no hay ningún sidecar disponible, devolver la imagen original.
+		// No sidecars available, return the original image.
 		if ( empty( $sources ) ) {
 			return $img;
 		}
 
-		// Evitar doble envoltorio si ya está dentro de <picture>.
-		// (preg_replace_callback no puede ver el contexto exterior, así que usamos
-		// un atributo marcador en el <img> para detectarlo.)
+		// Avoid double-wrapping if already inside <picture>.
+		// (preg_replace_callback cannot see the outer context, so we use
+		// a marker attribute on the <img> to detect it.)
 		if ( strpos( $attrs, 'data-ult-picture' ) !== false ) {
 			return $img;
 		}
 
-		// Añadir atributo marcador al <img> para evitar re-proceso.
+		// Add marker attribute to <img> to prevent reprocessing.
 		$img_marked = str_replace( '<img', '<img data-ult-picture="1"', $img );
 
 		return '<picture>' . $sources . $img_marked . '</picture>';
@@ -141,14 +125,6 @@ class Ultimizer_Frontend {
 	// Helpers
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Convierte las URLs de un atributo srcset al formato moderno indicado.
-	 * Devuelve el srcset convertido, o vacío si ninguna URL tiene sidecar.
-	 *
-	 * @param  string $srcset  Valor del atributo srcset.
-	 * @param  string $ext     'avif' o 'webp'.
-	 * @return string
-	 */
 	private function convert_srcset( $srcset, $ext ) {
 		$entries   = array_map( 'trim', explode( ',', $srcset ) );
 		$converted = [];
@@ -176,35 +152,16 @@ class Ultimizer_Frontend {
 		return $any_found ? implode( ', ', $converted ) : '';
 	}
 
-	/**
-	 * Convierte una URL de upload a ruta absoluta en disco.
-	 *
-	 * @param  string $url
-	 * @return string
-	 */
 	private function url_to_path( $url ) {
 		$path = str_replace( $this->upload_url, $this->upload_dir, $url );
-		// Normalizar separadores en Windows.
+		// Normalize directory separators on Windows.
 		return str_replace( '/', DIRECTORY_SEPARATOR, $path );
 	}
 
-	/**
-	 * Quita la extensión de una URL (Livit-1.jpg → Livit-1).
-	 *
-	 * @param  string $url
-	 * @return string
-	 */
 	private function strip_ext_url( $url ) {
 		return preg_replace( '/\.[^.\/?]+(\?.*)?$/', '', $url );
 	}
 
-	/**
-	 * Verifica si existen los sidecars AVIF y WebP para una ruta dada.
-	 * Usa caché en memoria para no repetir file_exists() en la misma petición.
-	 *
-	 * @param  string $file_path  Ruta absoluta al archivo original.
-	 * @return array{avif: bool, webp: bool}
-	 */
 	private function check_sidecars( $file_path ) {
 		$base = preg_replace( '/\.[^.\/\\\\]+$/', '', $file_path );
 

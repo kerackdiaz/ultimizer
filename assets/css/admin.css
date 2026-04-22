@@ -1,18 +1,13 @@
-/**
- * Ultimizer – Panel de administración.
- * Estilos modernos, limpios y compatibles con el admin de WordPress.
- */
-
 /* ============================================================
-   Layout principal
+   Base
    ============================================================ */
 
-.ultimizer-wrap {
-	margin: 20px 20px 20px 0;
+.ult-wrap {
+	margin: 20px 20px 40px 0;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.ultimizer-header {
+.ult-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -21,69 +16,65 @@
 	border-bottom: 2px solid #e2e8f0;
 }
 
-.ultimizer-logo {
+.ult-brand {
 	display: flex;
 	align-items: center;
 	gap: 10px;
 }
 
-.ultimizer-logo .dashicons {
-	font-size: 32px;
-	width: 32px;
-	height: 32px;
-	color: #6366f1;
+.ult-brand-logo {
+	width: 48px;
+	height: 48px;
+	object-fit: contain;
+	display: block;
 }
 
-.ultimizer-logo h1 {
+.ult-brand h1 {
 	margin: 0;
-	font-size: 24px;
+	font-size: 22px;
 	font-weight: 700;
 	color: #1e293b;
-	line-height: 1;
 }
 
-.ultimizer-version {
-	font-size: 12px;
+.ult-ver {
+	font-size: 11px;
 	color: #94a3b8;
 	background: #f1f5f9;
-	padding: 4px 10px;
+	padding: 3px 10px;
 	border-radius: 99px;
 }
 
 /* ============================================================
-   Navegación por pestañas
+   Tabs
    ============================================================ */
 
-.ultimizer-tabs {
+.ult-tabs {
 	margin-bottom: 24px;
 }
 
-.ultimizer-tabs ul {
+.ult-tabs ul {
 	display: flex;
-	gap: 4px;
+	gap: 2px;
 	margin: 0;
 	padding: 0;
 	list-style: none;
 	border-bottom: 2px solid #e2e8f0;
 }
 
-.ultimizer-tabs li a {
+.ult-tabs li a {
 	display: block;
-	padding: 10px 18px;
+	padding: 9px 16px;
 	font-size: 13px;
 	font-weight: 500;
-	color: #475569;
+	color: #64748b;
 	text-decoration: none;
 	border-radius: 6px 6px 0 0;
-	transition: background 0.15s, color 0.15s;
+	transition: color .15s, background .15s;
 }
 
-.ultimizer-tabs li a:hover {
-	color: #6366f1;
-	background: #f1f5f9;
-}
+.ult-tabs li a:hover { color: #6366f1; background: #f8fafc; }
 
-.ultimizer-tabs li.active a {
+.ult-tabs li.active a {
 	color: #6366f1;
 	background: #fff;
 	border: 2px solid #e2e8f0;
@@ -92,109 +83,514 @@
 }
 
 /* ============================================================
-   Tarjetas de estadísticas
+   Stats strip
    ============================================================ */
 
-.ultimizer-stats-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-	gap: 16px;
-	margin-bottom: 28px;
+.ult-stats-strip {
+	display: flex;
+	gap: 12px;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
 }
 
-.ultimizer-stat-card {
+.ult-stat {
+	flex: 1;
+	min-width: 130px;
 	background: #fff;
 	border: 1px solid #e2e8f0;
-	border-radius: 12px;
-	padding: 20px 16px;
+	border-radius: 10px;
+	padding: 16px 14px;
 	text-align: center;
-	box-shadow: 0 1px 3px rgba(0,0,0,.06);
-	transition: box-shadow 0.2s;
+	box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
 
-.ultimizer-stat-card:hover {
-	box-shadow: 0 4px 12px rgba(0,0,0,.1);
-}
+.ult-stat.green  { border-top: 3px solid #22c55e; }
+.ult-stat.amber  { border-top: 3px solid #f97316; }
+.ult-stat.blue   { border-top: 3px solid #3b82f6; }
 
-.ultimizer-stat-card .stat-icon {
-	font-size: 28px;
-	width: 28px;
-	height: 28px;
-	color: #94a3b8;
-	margin-bottom: 8px;
-}
-
-.ultimizer-stat-card .stat-value {
-	font-size: 26px;
+.ult-stat-n {
+	display: block;
+	font-size: 24px;
 	font-weight: 700;
 	color: #1e293b;
 	line-height: 1;
 	margin-bottom: 4px;
 }
 
-.ultimizer-stat-card .stat-label {
-	font-size: 12px;
+.ult-stat-l {
+	font-size: 11px;
 	color: #64748b;
+	text-transform: uppercase;
+	letter-spacing: .4px;
 }
-
-.ultimizer-stat-card.accent-green  { border-top: 3px solid #22c55e; }
-.ultimizer-stat-card.accent-orange { border-top: 3px solid #f97316; }
-.ultimizer-stat-card.accent-blue   { border-top: 3px solid #3b82f6; }
-.ultimizer-stat-card.accent-purple { border-top: 3px solid #a855f7; }
 
 /* ============================================================
-   Barra de progreso
+   Progress bars
    ============================================================ */
 
-.ultimizer-progress-section {
-	margin-bottom: 28px;
+.ult-global-progress,
+.ult-progress-wrap {
+	margin-bottom: 20px;
 }
 
-.ultimizer-progress-label {
+.ult-gp-labels,
+.ult-opt-labels {
 	display: flex;
 	justify-content: space-between;
+	align-items: center;
 	font-size: 13px;
 	color: #475569;
-	margin-bottom: 8px;
+	margin-bottom: 6px;
 }
 
-.ultimizer-progress-bar {
-	height: 10px;
+.ult-opt-right {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.ult-opt-timer {
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	color: #94a3b8;
+	background: #f1f5f9;
+	padding: 2px 8px;
+	border-radius: 99px;
+	letter-spacing: .5px;
+}
+
+.ult-opt-note {
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: #64748b;
+	display: flex;
+	align-items: flex-start;
+	gap: 5px;
+	line-height: 1.5;
+}
+
+.ult-opt-note .dashicons {
+	font-size: 15px;
+	width: 15px;
+	height: 15px;
+	flex-shrink: 0;
+	margin-top: 1px;
+	color: #6366f1;
+}
+
+.ult-track {
+	height: 8px;
 	background: #e2e8f0;
 	border-radius: 99px;
 	overflow: hidden;
 }
 
-.ultimizer-progress-bar.large {
-	height: 20px;
-}
+.ult-track.lg { height: 18px; }
 
-.ultimizer-progress-fill {
+.ult-bar {
 	height: 100%;
 	background: linear-gradient(90deg, #6366f1, #a855f7);
 	border-radius: 99px;
-	transition: width 0.4s ease;
+	transition: width .4s ease;
+}
+
+.ult-progress-txt {
+	margin: 6px 0 0;
+	font-size: 12px;
+	color: #64748b;
 }
 
 /* ============================================================
-   Información del servidor
+   Scan panel
    ============================================================ */
 
-.ultimizer-server-info h3 {
-	font-size: 15px;
-	color: #1e293b;
-	margin-bottom: 12px;
+.ult-scan-panel {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 24px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.05);
 }
 
-.ultimizer-info-table td {
+.ult-scan-top {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.ult-scan-top h2 {
+	margin: 0 0 4px;
+	font-size: 16px;
+	color: #1e293b;
+}
+
+.ult-scan-top p {
+	margin: 0;
+	color: #64748b;
+	font-size: 13px;
+}
+
+.ult-scan-actions {
+	display: flex;
+	gap: 8px;
+	flex-shrink: 0;
+	align-items: center;
+}
+
+.ult-btn-lg {
+	padding: 8px 18px !important;
+	font-size: 14px !important;
+	height: auto !important;
+	display: inline-flex !important;
+	align-items: center;
+	gap: 4px;
+}
+
+.ult-btn-purple {
+	background: #6366f1 !important;
+	border-color: #4f46e5 !important;
+	color: #fff !important;
+}
+
+.ult-btn-purple:hover {
+	background: #4f46e5 !important;
+}
+
+/* ============================================================
+   Results summary + table
+   ============================================================ */
+
+.ult-results-summary {
+	margin-bottom: 14px;
+}
+
+.ult-results-summary-inner {
+	display: flex;
+	gap: 24px;
+	align-items: center;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 12px 16px;
+	font-size: 13px;
+	color: #475569;
+	flex-wrap: wrap;
+}
+
+.ult-scan-time {
+	margin-left: auto;
+	font-size: 12px;
+	color: #94a3b8;
+}
+
+.ult-table-wrap {
+	overflow-x: auto;
+}
+
+.ult-image-table,
+.ult-log-table {
+	font-size: 13px;
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.ult-image-table th,
+.ult-log-table th {
+	font-weight: 600;
+	color: #374151;
+	background: #f8fafc;
+	padding: 10px 12px;
+}
+
+.ult-image-table td,
+.ult-log-table td {
+	padding: 9px 12px;
 	vertical-align: middle;
 }
 
+.col-exclude {
+	width: 44px;
+	text-align: center;
+}
+
+.ult-excl-cb {
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+}
+
+.col-thumb { width: 48px; }
+
+.ult-thumb {
+	width: 40px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: 5px;
+	display: block;
+}
+
+.ult-no-thumb {
+	font-size: 28px;
+	color: #cbd5e1;
+}
+
+.ult-row-done td { background: #f0fdf4; }
+
+.ult-row-excluded td {
+	background: #fafafa;
+	opacity: .7;
+}
+
 /* ============================================================
-   Badges
+   Server card
    ============================================================ */
 
-.ult-badge {
+.ult-server-card {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	padding: 20px 24px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.ult-server-card h3 {
+	margin: 0 0 14px;
+	font-size: 14px;
+	font-weight: 600;
+	color: #1e293b;
+}
+
+.ult-server-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 24px;
+}
+
+.ult-server-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+}
+
+.ult-label {
+	color: #64748b;
+	min-width: 80px;
+}
+
+/* ============================================================
+   Settings cards
+   ============================================================ */
+
+.ult-card {
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 12px;
+	padding: 24px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.ult-card-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.ult-card-header .dashicons {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+	color: #6366f1;
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.ult-card-header h3 {
+	margin: 0 0 4px;
+	font-size: 15px;
+	font-weight: 600;
+	color: #1e293b;
+}
+
+.ult-card-header p {
+	margin: 0;
+	font-size: 13px;
+	color: #64748b;
+}
+
+/* Quality sliders */
+
+.ult-quality-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 24px;
+}
+
+.ult-quality-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.ult-quality-top label {
+	font-weight: 600;
+	font-size: 13px;
+	color: #1e293b;
+}
+
+.ult-quality-val {
+	font-size: 20px;
+	font-weight: 700;
+	color: #6366f1;
+	min-width: 32px;
+	text-align: right;
+}
+
+.ult-range {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 6px;
+	border-radius: 99px;
+	background: #e2e8f0;
+	outline: none;
+	cursor: pointer;
+}
+
+.ult-range::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #6366f1;
+	cursor: pointer;
+	box-shadow: 0 1px 4px rgba(99,102,241,.4);
+}
+
+.ult-range::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #6366f1;
+	cursor: pointer;
+	border: none;
+}
+
+.ult-range-desc {
+	font-size: 11px;
+	color: #94a3b8;
+	margin: 5px 0 2px;
+}
+
+.ult-range-hint {
+	font-size: 11px;
+	color: #6366f1;
+	font-weight: 500;
+	margin: 0;
+}
+
+/* Features list */
+
+.ult-features-card { border-left: 3px solid #22c55e; }
+
+.ult-features-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 10px;
+}
+
+.ult-feature {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #374151;
+}
+
+.ult-feature small { color: #94a3b8; }
+
+/* ============================================================
+   Section headers (log/backups)
+   ============================================================ */
+
+.ult-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.ult-section-meta {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.ult-section-meta h2 { margin: 0; font-size: 18px; }
+
+/* Log summary strip */
+
+.ult-log-summary {
+	display: flex;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin-bottom: 20px;
+}
+
+.ult-log-stat {
+	flex: 1;
+	min-width: 120px;
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	padding: 14px;
+	text-align: center;
+}
+
+.ult-log-stat-n {
+	display: block;
+	font-size: 20px;
+	font-weight: 700;
+	color: #1e293b;
+	margin-bottom: 2px;
+}
+
+.ult-log-stat-l {
+	font-size: 11px;
+	color: #64748b;
+	text-transform: uppercase;
+	letter-spacing: .4px;
+}
+
+/* Table cells */
+
+.ult-filename { font-weight: 500; color: #1e293b; display: block; }
+.ult-aid      { color: #94a3b8; font-size: 11px; }
+.ult-date     { color: #64748b; font-size: 12px; }
+.ult-muted    { color: #94a3b8; }
+
+.ult-savings-pct          { font-weight: 700; margin-right: 4px; }
+.ult-savings-pos          { color: #166534; }  /* actual savings → green */
+.ult-savings-neg          { color: #b91c1c; }  /* image grew → red */
+.ult-savings-zero         { color: #64748b; }  /* no change → gray */
+.ult-savings-bytes        { color: #64748b; font-size: 11px; }
+.ult-savings-note         { color: #94a3b8; font-size: 11px; font-style: italic; }
+
+.ult-row-missing td { opacity: .6; }
+
+/* ============================================================
+   Pills / badges
+   ============================================================ */
+
+.ult-pill {
 	display: inline-block;
 	padding: 3px 10px;
 	border-radius: 99px;
@@ -203,157 +599,106 @@
 	line-height: 1.6;
 }
 
-.ult-badge.green  { background: #dcfce7; color: #166534; }
-.ult-badge.orange { background: #ffedd5; color: #9a3412; }
-.ult-badge.red    { background: #fee2e2; color: #991b1b; }
-.ult-badge.blue   { background: #dbeafe; color: #1e40af; }
+.ult-pill.green  { background: #dcfce7; color: #166534; }
+.ult-pill.amber  { background: #ffedd5; color: #9a3412; }
+.ult-pill.red    { background: #fee2e2; color: #991b1b; }
+.ult-pill.blue   { background: #dbeafe; color: #1e40af; }
+.ult-pill.gray   { background: #f1f5f9; color: #64748b; }
 
-.ult-count-badge {
-	display: inline-block;
+.ult-pill.sm { padding: 2px 7px; font-size: 10px; }
+
+.ult-count-pill {
 	background: #6366f1;
 	color: #fff;
+	display: inline-block;
+	padding: 2px 9px;
+	border-radius: 99px;
 	font-size: 12px;
 	font-weight: 600;
-	padding: 2px 8px;
-	border-radius: 99px;
-	vertical-align: middle;
-	margin-left: 6px;
 }
 
-.ult-hint {
-	font-size: 11px;
-	color: #94a3b8;
-	font-weight: 400;
+.ult-count-pill.gray {
+	background: #f1f5f9;
+	color: #64748b;
+	margin-left: 4px;
 }
+
+/* Backup table actions */
+.ult-backup-actions { white-space: nowrap; }
+.ult-backup-actions .button + .button { margin-left: 4px; }
+.ult-delete-backup-btn { color: #b91c1c !important; border-color: #fca5a5 !important; }
+.ult-delete-backup-btn:hover { background: #fee2e2 !important; border-color: #ef4444 !important; }
+
 
 /* ============================================================
-   Secciones de configuración
+   Empty state
    ============================================================ */
 
-.ultimizer-section {
-	background: #fff;
-	border: 1px solid #e2e8f0;
-	border-radius: 10px;
-	padding: 20px 24px;
-	margin-bottom: 20px;
-	box-shadow: 0 1px 3px rgba(0,0,0,.04);
-}
-
-.ultimizer-section h2 {
-	font-size: 15px;
-	font-weight: 600;
-	color: #1e293b;
-	margin-top: 0;
-	margin-bottom: 16px;
-	padding-bottom: 10px;
-	border-bottom: 1px solid #f1f5f9;
-}
-
-/* ============================================================
-   Optimizador masivo
-   ============================================================ */
-
-.ultimizer-bulk-panel {
-	background: #fff;
-	border: 1px solid #e2e8f0;
-	border-radius: 12px;
-	padding: 28px;
-	box-shadow: 0 1px 3px rgba(0,0,0,.06);
-}
-
-.ultimizer-bulk-stats {
-	display: flex;
-	gap: 20px;
-	margin-bottom: 24px;
-}
-
-.bulk-stat {
-	flex: 1;
+.ult-empty {
 	text-align: center;
-	padding: 16px;
-	background: #f8fafc;
-	border-radius: 10px;
-	border: 1px solid #e2e8f0;
+	padding: 48px 24px;
+	color: #94a3b8;
 }
 
-.bulk-stat.accent-green  { border-color: #86efac; background: #f0fdf4; }
-.bulk-stat.accent-orange { border-color: #fdba74; background: #fff7ed; }
-
-.bulk-stat-number {
+.ult-empty .dashicons {
+	font-size: 48px;
+	width: 48px;
+	height: 48px;
 	display: block;
-	font-size: 32px;
-	font-weight: 700;
-	color: #1e293b;
-	line-height: 1;
-	margin-bottom: 4px;
+	margin: 0 auto 12px;
 }
 
-.bulk-stat-label {
+.ult-empty p { font-size: 14px; margin: 0; }
+
+/* ============================================================
+   Donate bar
+   ============================================================ */
+
+.ult-donate-bar {
+	margin-top: 32px;
+	border-top: 1px solid #e2e8f0;
+	padding-top: 20px;
+}
+
+.ult-donate-inner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	background: #fff;
+	border: 1px solid #e2e8f0;
+	border-radius: 10px;
+	padding: 16px 20px;
+	flex-wrap: wrap;
+}
+
+.ult-donate-text {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	font-size: 13px;
 	color: #64748b;
 }
 
-.ultimizer-bulk-controls {
+.ult-donate-text .dashicons {
+	color: #ef4444;
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+.ult-donate-buttons {
 	display: flex;
-	gap: 12px;
-	margin-bottom: 24px;
+	gap: 6px;
 }
 
-.button-hero {
-	padding: 10px 24px !important;
-	font-size: 15px !important;
-	height: auto !important;
+.ult-donate-btn {
+	font-weight: 600 !important;
+	color: #0070ba !important;
+	border-color: #0070ba !important;
 }
 
-#ult-bulk-progress-wrap {
-	margin-top: 24px;
-}
-
-.ultimizer-bulk-log {
-	margin-top: 16px;
-	max-height: 260px;
-	overflow-y: auto;
-	font-size: 12px;
-	color: #475569;
-	background: #f8fafc;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	padding: 12px;
-}
-
-.ultimizer-bulk-log .log-line {
-	padding: 3px 0;
-	border-bottom: 1px solid #f1f5f9;
-}
-
-.ultimizer-bulk-log .log-line:last-child {
-	border-bottom: none;
-}
-
-.ultimizer-bulk-log .log-line.success { color: #166534; }
-.ultimizer-bulk-log .log-line.error   { color: #991b1b; }
-.ultimizer-bulk-log .log-line.skip    { color: #92400e; }
-
-/* ============================================================
-   Tablas de log y respaldos
-   ============================================================ */
-
-.ultimizer-log-controls {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 16px;
-}
-
-.ultimizer-log-controls h2 {
-	margin: 0;
-}
-
-.ultimizer-log-table {
-	font-size: 13px;
-}
-
-.ultimizer-log-table th {
-	font-weight: 600;
-	color: #374151;
+.ult-donate-btn:hover {
+	background: #0070ba !important;
+	color: #fff !important;
 }

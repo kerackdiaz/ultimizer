@@ -1,9 +1,4 @@
 <?php
-/**
- * Gestión del registro de optimizaciones en una tabla personalizada de la base de datos.
- * Almacena: adjunto, tamaño original, tamaño optimizado, ahorro, formatos generados y fecha.
- */
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -16,9 +11,6 @@ class Ultimizer_Logger {
 	// Estructura de la tabla
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Crea la tabla de log si no existe. Se llama en activación del plugin.
-	 */
 	public static function create_table() {
 		global $wpdb;
 
@@ -50,13 +42,6 @@ class Ultimizer_Logger {
 	// Insertar entrada
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Registra una optimización en el log.
-	 *
-	 * @param  array $data Claves requeridas: attachment_id, file_path, original_size,
-	 *                     optimized_size, savings_bytes, savings_percent, format_original.
-	 * @return int|false  ID de la fila insertada o false.
-	 */
 	public function log( array $data ) {
 		global $wpdb;
 
@@ -127,14 +112,9 @@ class Ultimizer_Logger {
 	}
 
 	// -------------------------------------------------------------------------
-	// Estadísticas globales
+	// Global statistics
 	// -------------------------------------------------------------------------
 
-	/**
-	 * Suma total de bytes ahorrados y porcentaje medio.
-	 *
-	 * @return array { total_savings_bytes, avg_savings_percent, total_entries }
-	 */
 	public function get_global_stats() {
 		global $wpdb;
 
@@ -166,7 +146,7 @@ class Ultimizer_Logger {
 	}
 
 	// -------------------------------------------------------------------------
-	// Limpiar el log
+	// Clear log
 	// -------------------------------------------------------------------------
 
 	public function clear() {
